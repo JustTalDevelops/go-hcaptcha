@@ -5,10 +5,39 @@ It uses a Playwright tab with the HSW script injected to generate HSW
 on the fly, and then pipes that to other go routines which are made to purely
 solve HCaptchas until it gets a password UUID.
 
-# Reason
+# Usage
 
-This project is purely made to abuse on MCPE Pocket Servers (lmao fuck you),
-so a lot of code still in development will be centered around that site.
+## No proxies, one worker:
+
+```go
+s, err := hcaptcha.NewSolver("example.com", 1)
+if err != nil {
+  panic(err)
+}
+defer s.Close()
+solution, err := s.Solve()
+if err != nil {
+  panic(err)
+}
+// F0_eyJ0eXAiOiJKV1Q...
+fmt.Println(solution)
+```
+
+## Proxied, two workers:
+
+```go
+s, err := hcaptcha.NewSolverWithProxies("example.com", 2, proxies)
+if err != nil {
+  panic(err)
+}
+defer s.Close()
+solution, err := s.Solve()
+if err != nil {
+  panic(err)
+}
+// F0_eyJ0eXAiOiJKV1Q...
+fmt.Println(solution)
+```
 
 # Resources
 

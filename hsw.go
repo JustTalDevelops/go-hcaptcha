@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-// getHsw sends a request to the HCaptcha site config system for a HSW token.
+// getHsw sends a request to the HCaptcha site config system for a HSW token. 
 // Then, we use the original token provided to us to generate HSW to send in our captcha requests.
 // The HSW is generated through Playwright. On initial startup, Playwright (running Firefox, WebKit seems to fail)
 // opens a new empty tab, injects the HSW script by HCaptcha, and then evaluates the HSW using the page evaluate

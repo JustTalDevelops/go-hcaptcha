@@ -18,7 +18,7 @@ import (
 
 type Task struct {
 	Image string `json:"datapoint_uri"`
-	Key string `json:"task_key"`
+	Key   string `json:"task_key"`
 }
 
 func main() {
@@ -88,8 +88,8 @@ func tryToSolve(host, siteKey string, page playwright.Page) (code string, err er
 	motionData.Version = 1
 	motionData.Start = timestamp
 	motionData.Movements = movements
-	motionData.Md = append(motionData.Md, makeMovement(makeTimestamp() + randomFromRange(30, 120)))
-	motionData.Mu = append(motionData.Mu, makeMovement(makeTimestamp() + randomFromRange(30, 120)))
+	motionData.Md = append(motionData.Md, makeMovement(makeTimestamp()+randomFromRange(30, 120)))
+	motionData.Mu = append(motionData.Mu, makeMovement(makeTimestamp()+randomFromRange(30, 120)))
 	motionData.TopLevel = topLevel
 	motionData.Session = []string{}
 	motionData.WidgetList = append(motionData.WidgetList, "07r95qrrtxj")
@@ -158,28 +158,6 @@ func randomTrueFalse() string {
 	return strconv.FormatBool(rand.Intn(2) == 1)
 }
 
-func getHsw(host, sitekey, userAgent string, page playwright.Page) (hsw string, original string, err error) {
-	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host=" + host + "&sitekey=" + sitekey + "&sc=1&swa=1", nil)
-	if err != nil {
-		return "", "", err
-	}
-	req.Header.Set("User-Agent", userAgent)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", err
-	}
-	result := gjson.ParseBytes(b)
-	pResp, err := page.Evaluate("hsw(\"" + result.Get("c.req").String() + "\");")
-	if err != nil {
-		return "", "", err
-	}
-	return pResp.(string), result.Get("c").String(), nil
-}
-
 func getXYMovements(timestamp int64) (mouseMovements [][]float64, err error) {
 	lastMovement := timestamp
 	var current float64
@@ -212,11 +190,11 @@ func makeMovement(timestamp int64) []int64 {
 }
 
 func randomFloatFromRange(min, max int) float64 {
-	return float64(rand.Intn(max - min) + min)
+	return float64(rand.Intn(max-min) + min)
 }
 
 func randomFromRange(min, max int) int64 {
-	return int64(rand.Intn(max - min) + min)
+	return int64(rand.Intn(max-min) + min)
 }
 
 func makeTimestamp() int64 {

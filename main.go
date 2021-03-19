@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/corpix/uarand"
+	"github.com/google/go-querystring/query"
 	"github.com/mxschmitt/playwright-go"
 	"github.com/tidwall/gjson"
 	"io/ioutil"
@@ -53,6 +54,25 @@ func tryToSolve(host, siteKey string, page playwright.Page) (code string, err er
 		return "", err
 	}
 
+	var newViewport NewViewport
+	newViewport.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
+	newViewport.ProductSub = "20030107"
+	newViewport.Vendor = "Google Inc."
+	newViewport.GlobalPrivacyControl = true
+	newViewport.HardwareConcurrency = 10
+	newViewport.CookieEnabled = true
+	newViewport.AppCodeName = "Mozilla"
+	newViewport.AppName = "Netscape"
+	newViewport.Platform = "Win32"
+	newViewport.Product = "Gecko"
+	newViewport.AppVersion = "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36"
+	newViewport.Language = "en-US"
+	newViewport.Languages = append(newViewport.Languages, "en-US")
+	newViewport.Languages = append(newViewport.Languages, "en")
+	newViewport.Online = true
+	newViewport.DeviceMemory = 4
+	newViewport.Plugins = []string{}
+
 	var screen Screen
 	screen.AvailableWidth = 1920
 	screen.AvailableHeight = 1040
@@ -64,6 +84,7 @@ func tryToSolve(host, siteKey string, page playwright.Page) (code string, err er
 	timestamp += randomFromRange(30, 120)
 
 	var topLevel TopLevel
+	topLevel.NewViewport = newViewport
 	topLevel.Version = 1
 	topLevel.Start = timestamp
 	topLevel.Screen = screen
@@ -96,21 +117,18 @@ func tryToSolve(host, siteKey string, page playwright.Page) (code string, err er
 	motionData.WidgetId = "07r95qrrtxj"
 	motionData.Href = "https://minecraftpocket-servers.com/server/80103/vote/"
 
-	b, err := json.Marshal(motionData)
+	values, err := query.Values(motionData)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Println(string(b))
-
 	form := url.Values{}
-	form.Add("v", "a9589f9")
 	form.Add("siteKey", siteKey)
 	form.Add("host", host)
-	form.Add("hl", "en")
-	form.Add("motionData", string(b))
+	form.Add("motionData", values.Encode())
 	form.Add("n", hsw)
 	form.Add("c", original)
+	form.Add("v", "6043b6da")
 
 	req, err := http.NewRequest("POST", "https://hcaptcha.com/getcaptcha", strings.NewReader(form.Encode()))
 	if err != nil {
@@ -127,7 +145,7 @@ func tryToSolve(host, siteKey string, page playwright.Page) (code string, err er
 		return "", err
 	}
 
-	b, err = ioutil.ReadAll(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

@@ -150,6 +150,15 @@ func (h *HSWPool) GetHSW() (HSW, error) {
 	}
 }
 
+// Close closes all workers currently running.
+func (h *HSWPool) Close() {
+	for _, w := range h.workers {
+		if w.running {
+			w.Close()
+		}
+	}
+}
+
 // generateHsw sends a request to the HCaptcha site config system for a HSW token.
 // Then, we use the original token provided to us to generate HSW to send in our captcha requests.
 // The HSW is generated through Playwright. On initial startup, Playwright (running Firefox, WebKit seems to fail)

@@ -157,6 +157,11 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	return "", errors.New(string(b))
 }
 
+// Close closes all workers currently running.
+func (s *Solver) Close() {
+	s.hswPool.Close()
+}
+
 // UpdatePoolUserAgent updates both the pool and the solver's user agents.
 func (s *Solver) UpdateAllUserAgents(userAgent string) {
 	s.UpdatePoolUserAgent(userAgent)

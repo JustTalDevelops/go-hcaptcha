@@ -1,7 +1,7 @@
 # hcaptcha-solver-go
 
 An HCaptcha solver for GoLang.
-It uses Playwright for generating HSW which is put in an HSW pool, which can then be accessed by a solver to generate captchas.
+It uses Playwright for generating HSW which is put in an HSW pool, which can then be accessed by a solver to solve captchas.
 
 # Usage
 Below are some usage examples on how you would use the solver.

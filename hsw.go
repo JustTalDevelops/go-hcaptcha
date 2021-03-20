@@ -62,6 +62,10 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 	go func() {
 		var hsw HSW
 		for {
+			if len(pool.hswPool) == pool.poolLimit {
+				// We don't want to overfill the pool with entries that it is never going to touch, so we continue until the pool shrinks.
+				continue
+			}
 			hsw, err = generateHsw(worker)
 
 			// We run the check after the HSW has been generated,
@@ -93,10 +97,11 @@ type HSWPool struct {
 	host, siteKey string
 	log           *logrus.Logger
 	userAgent     string
+	poolLimit     int
 }
 
 // NewHSWPool creates a new HSW pool with the amount of workers specified.
-func NewHSWPool(host, siteKey, hswScriptUrl string, log *logrus.Logger, workers int) (pool *HSWPool, err error) {
+func NewHSWPool(host, siteKey, hswScriptUrl string, log *logrus.Logger, poolLimit, workers int) (pool *HSWPool, err error) {
 	if workers <= 0 {
 		return nil, errors.New("invalid worker amount for pool")
 	}
@@ -107,6 +112,7 @@ func NewHSWPool(host, siteKey, hswScriptUrl string, log *logrus.Logger, workers 
 		siteKey:      siteKey,
 		log:          log,
 		userAgent:    DefaultUserAgent,
+		poolLimit:    poolLimit,
 	}
 
 	var worker *HSWWorker
@@ -165,7 +171,7 @@ func (h *HSWPool) Close() {
 // opens a new empty tab, injects the HSW script by HCaptcha, and then evaluates the HSW using the page evaluate
 // function. It then returns the response, plus the HSW token and an error in case anything went wrong.
 func generateHsw(worker *HSWWorker) (hsw HSW, err error) {
-	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+worker.pool.host+"&siteKey="+worker.pool.siteKey+"&sc=1&swa=1", nil)
+	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+worker.pool.host+"&sitekey="+worker.pool.siteKey+"&sc=1&swa=1", nil)
 	if err != nil {
 		return HSW{}, err
 	}

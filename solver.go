@@ -42,8 +42,16 @@ func (s *Solver) ProxiesEnabled() bool {
 // It returns an error if it fails to solve the code before the deadline.
 func (s *Solver) Solve(deadline time.Time) (string, error) {
 	for {
+		var code string
+		var lastHSW HSW
+		var err error
+
 		if deadline.After(time.Now()) {
-			code, err := s.SolveOnce()
+			if lastHSW.C != "" && lastHSW.N != "" {
+				code, lastHSW, err = s.SolveOnce(lastHSW)
+			} else {
+				code, lastHSW, err = s.SolveOnce()
+			}
 			if err != nil {
 				continue
 			}
@@ -56,16 +64,20 @@ func (s *Solver) Solve(deadline time.Time) (string, error) {
 
 // SolveOnce attempts to solve once. If successful,
 // it returns a code and otherwise returns an error.
-func (s *Solver) SolveOnce() (code string, err error) {
-	hsw, err := s.hswPool.GetHSW()
-	if err != nil {
-		return "", err
+func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
+	if len(hsw) == 0 {
+		latestHSW, err := s.hswPool.GetHSW()
+		if err != nil {
+			return "", HSW{}, err
+		}
+
+		hsw = append(hsw, latestHSW)
 	}
 
 	timestamp := s.makeTimestamp() + s.randomFromRange(30, 120)
 	movements, err := s.getMouseMovements(timestamp)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 
 	motionData := url.Values{}
@@ -76,35 +88,35 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	form := url.Values{}
 	form.Add("sitekey", s.siteKey)
 	form.Add("host", s.site)
-	form.Add("n", hsw.N)
-	form.Add("c", hsw.C)
+	form.Add("n", hsw[0].N)
+	form.Add("c", hsw[0].C)
 	form.Add("motionData", motionData.Encode())
 
 	req, err := http.NewRequest("POST", "https://hcaptcha.com/getcaptcha", strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 	response := gjson.Parse(string(b))
 	if response.Get("generated_pass_UUID").Exists() {
-		return response.Get("generated_pass_UUID").String(), nil
+		return response.Get("generated_pass_UUID").String(), HSW{}, nil
 	}
 
 	var tasks []Task
 	err = json.Unmarshal([]byte(response.Get("tasklist").String()), &tasks)
 	if err != nil {
-		return "", err
+		return "", hsw[0], err
 	}
 
 	key := response.Get("key").String()
@@ -118,7 +130,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	timestamp = s.makeTimestamp() + s.randomFromRange(30, 120)
 	movements, err = s.getMouseMovements(timestamp)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 
 	motionData = url.Values{}
@@ -135,26 +147,26 @@ func (s *Solver) SolveOnce() (code string, err error) {
 
 	req, err = http.NewRequest("POST", "https://hcaptcha.com/checkcaptcha/"+key, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 
 	b, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", HSW{}, err
 	}
 	response = gjson.Parse(string(b))
 	if response.Get("generated_pass_UUID").Exists() {
-		return response.Get("generated_pass_UUID").String(), nil
+		return response.Get("generated_pass_UUID").String(), HSW{}, nil
 	}
 
-	return "", errors.New(string(b))
+	return "", hsw[0], errors.New(string(b))
 }
 
 // Close closes all workers currently running.
@@ -185,7 +197,7 @@ func (s *Solver) randomTrueFalse() string {
 
 // getMouseMovements returns random mouse movements based on a timestamp.
 func (s *Solver) getMouseMovements(timestamp int64) (string, error) {
-	motionCount := s.randomFromRange(1000, 10000)
+	motionCount := s.randomFromRange(8000, 10000)
 	var mouseMovements [][3]int64
 	for i := 0; i < int(motionCount); i++ {
 		timestamp += s.randomFromRange(0, 10)
@@ -211,10 +223,10 @@ func (s *Solver) makeTimestamp() int64 {
 // NewSolver creates a new instance of an HCaptcha solver.
 func NewSolver(site string, workers ...int) (*Solver, error) {
 	if len(workers) == 0 {
-		workers = append(workers, DefaultWorkerAmount)
+		workers = append(workers, DefaultWorkerAmount, DefaultHWSLimit)
 	}
 	siteKey := uuid.New().String()
-	pool, err := NewHSWPool(site, siteKey, DefaultScriptUrl, logrus.New(), workers[0])
+	pool, err := NewHSWPool(site, siteKey, DefaultScriptUrl, logrus.New(), workers[1], workers[0])
 	if err != nil {
 		return nil, err
 	}

@@ -45,7 +45,7 @@ fmt.Println(solution)
 # Resources
 
 ## [JimmyLaurent's HCaptcha Solver in JS](https://github.com/JimmyLaurent/hcaptcha-solver)
-JimmyLaurent's solver was a big help with the core structure of HCaptcha's API.
+JimmyLaurent's helped a lot with the core structure of HCaptcha's API.
 If you are interested in building your own solver, I would check out his repository,
 although it is a bit outdated.
 

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	s, err := hcaptcha.NewSolver("minecraftpocket-servers.com")
+	s, err := hcaptcha.NewSolver("minecraftpocket-servers.com", 1, 1)
 	if err != nil {
 		panic(err)
 	}

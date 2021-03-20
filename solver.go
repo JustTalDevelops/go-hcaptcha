@@ -203,7 +203,7 @@ func (s *Solver) getMouseMovements(timestamp int64) (string, error) {
 	var mouseMovements [][3]int64
 	for i := 0; i < int(motionCount); i++ {
 		timestamp += s.randomFromRange(0, 10)
-		mouseMovements = append(mouseMovements, [3]int64{s.randomFromRange(0, 600), s.randomFromRange(0, 600), timestamp})
+		mouseMovements = append(mouseMovements, [3]int64{s.randomFromRange(0, 500), s.randomFromRange(0, 500), timestamp})
 	}
 	b, err := json.Marshal(mouseMovements)
 	if err != nil {

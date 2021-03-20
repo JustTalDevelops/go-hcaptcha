@@ -16,9 +16,11 @@ if err != nil {
   panic(err)
 }
 defer s.Close()
-solution, err := s.Solve(time.Now().Add(50 * time.Second)) // We must provide a deadline
+// We provide a deadline that the solver must have the solution done by.
+// If the deadline is not reached, an error is sent instead of the solution.
+solution, err := s.Solve(time.Now().Add(50 * time.Second))
 if err != nil {
-panic(err)
+  panic(err)
 }
 // F0_eyJ0eXAiOiJKV1Q...
 fmt.Println(solution)
@@ -32,7 +34,9 @@ if err != nil {
   panic(err)
 }
 defer s.Close()
-solution, err := s.Solve(time.Now().Add(50 * time.Second)) // We must provide a deadline
+// We provide a deadline that the solver must have the solution done by.
+// If the deadline is not reached, an error is sent instead of the solution.
+solution, err := s.Solve(time.Now().Add(50 * time.Second))
 if err != nil {
   panic(err)
 }

@@ -2,8 +2,7 @@
 
 An HCaptcha solver for GoLang.
 It uses a Playwright tab with the HSW script injected to generate HSW
-on the fly, and then pipes that to other go routines which are made to purely
-solve HCaptchas until it gets a password UUID.
+on the fly, which can then be accessed by a solver to generate captchas.
 
 # Usage
 Below are some usage examples on how you would use the solver.

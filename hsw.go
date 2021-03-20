@@ -1,8 +1,7 @@
-package main
+package hcaptcha
 
 import (
 	"errors"
-	"github.com/corpix/uarand"
 	"github.com/mxschmitt/playwright-go"
 	"github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -26,6 +25,7 @@ type HSWWorker struct {
 	playwrightPage     playwright.Page
 	pool               *HSWPool
 	running            bool
+	client             *http.Client
 }
 
 // Close closes all Playwright instances, and set's the running status to false to close HSW generation.
@@ -40,7 +40,7 @@ func (h *HSWWorker) Close() {
 // NewWorker returns a new HSW worker to be used in HSW pools.
 func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 	var err error
-	worker := &HSWWorker{pool: pool, running: true}
+	worker := &HSWWorker{pool: pool, running: true, client: http.DefaultClient}
 
 	worker.playwrightInstance, err = playwright.Run()
 	if err != nil {
@@ -62,7 +62,7 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 	go func() {
 		var hsw HSW
 		for {
-			hsw, err = generateHsw(pool.host, pool.siteKey, worker.playwrightPage)
+			hsw, err = generateHsw(worker)
 
 			// We run the check after the HSW has been generated,
 			// because we are more likely to be already generating HSW
@@ -92,6 +92,7 @@ type HSWPool struct {
 	hswScriptUrl  *string
 	host, siteKey string
 	log           *logrus.Logger
+	userAgent     string
 }
 
 // NewHSWPool creates a new HSW pool with the amount of workers specified.
@@ -105,6 +106,7 @@ func NewHSWPool(host, siteKey, hswScriptUrl string, log *logrus.Logger, workers 
 		host:         host,
 		siteKey:      siteKey,
 		log:          log,
+		userAgent:    DefaultUserAgent,
 	}
 
 	var worker *HSWWorker
@@ -153,13 +155,13 @@ func (h *HSWPool) GetHSW() (HSW, error) {
 // The HSW is generated through Playwright. On initial startup, Playwright (running Firefox, WebKit seems to fail)
 // opens a new empty tab, injects the HSW script by HCaptcha, and then evaluates the HSW using the page evaluate
 // function. It then returns the response, plus the HSW token and an error in case anything went wrong.
-func generateHsw(host, siteKey string, page playwright.Page) (hsw HSW, err error) {
-	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+host+"&siteKey="+siteKey+"&sc=1&swa=1", nil)
+func generateHsw(worker *HSWWorker) (hsw HSW, err error) {
+	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+worker.pool.host+"&siteKey="+worker.pool.siteKey+"&sc=1&swa=1", nil)
 	if err != nil {
 		return HSW{}, err
 	}
-	req.Header.Set("User-Agent", uarand.GetRandom())
-	resp, err := http.DefaultClient.Do(req)
+	req.Header.Set("User-Agent", worker.pool.userAgent)
+	resp, err := worker.client.Do(req)
 	if err != nil {
 		return HSW{}, err
 	}
@@ -168,7 +170,7 @@ func generateHsw(host, siteKey string, page playwright.Page) (hsw HSW, err error
 		return HSW{}, err
 	}
 	result := gjson.ParseBytes(b)
-	pResp, err := page.Evaluate("hsw(\"" + result.Get("c.req").String() + "\");")
+	pResp, err := worker.playwrightPage.Evaluate("hsw(\"" + result.Get("c.req").String() + "\");")
 	if err != nil {
 		return HSW{}, err
 	}

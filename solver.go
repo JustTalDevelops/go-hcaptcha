@@ -1,6 +1,8 @@
 package hcaptcha
 
 import (
+	vision "cloud.google.com/go/vision/apiv1"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/google/uuid"
@@ -24,6 +26,7 @@ type Solver struct {
 	sRand         *rand.Rand
 	userAgent     string
 	log           *logrus.Logger
+	vision        *vision.ImageAnnotatorClient
 }
 
 // Task is a task assigned by HCaptcha.
@@ -111,6 +114,7 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 		return "", HSW{}, err
 	}
 	response := gjson.Parse(string(b))
+	resp.Body.Close()
 	if response.Get("generated_pass_UUID").Exists() {
 		return response.Get("generated_pass_UUID").String(), HSW{}, nil
 	}
@@ -121,12 +125,19 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 		return "", hsw[0], errors.New(string(b))
 	}
 
+	prompt := strings.Split(response.Get("requester_question").Get("en").String(), " ")
+
 	key := response.Get("key").String()
 	job := response.Get("request_type").String()
 
 	taskResponses := make(map[string][]string)
 	for _, t := range tasks {
-		taskResponses[t.Key] = []string{s.randomTrueFalse()}
+		ok, err := s.ImageContainsObject(t.Image, prompt[len(prompt)-1])
+		if err != nil {
+			// The user probably does not have Vision API set up, so we just choose a random true or false value
+			ok = s.randomTrueFalse()
+		}
+		taskResponses[t.Key] = []string{strconv.FormatBool(ok)}
 	}
 
 	timestamp = s.makeTimestamp() + s.randomFromRange(30, 120)
@@ -164,6 +175,7 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 		return "", HSW{}, err
 	}
 	response = gjson.Parse(string(b))
+	resp.Body.Close()
 	if response.Get("generated_pass_UUID").Exists() {
 		return response.Get("generated_pass_UUID").String(), HSW{}, nil
 	}
@@ -173,6 +185,7 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 
 // Close closes all workers currently running.
 func (s *Solver) Close() {
+	s.vision.Close()
 	s.hswPool.Close()
 }
 
@@ -193,8 +206,8 @@ func (s *Solver) UpdateUserAgent(userAgent string) {
 }
 
 // randomTrueFalse returns a random boolean to be used in task responses.
-func (s *Solver) randomTrueFalse() string {
-	return strconv.FormatBool(s.sRand.Intn(2) == 1)
+func (s *Solver) randomTrueFalse() bool {
+	return s.sRand.Intn(2) == 1
 }
 
 // getMouseMovements returns random mouse movements based on a timestamp.
@@ -222,6 +235,41 @@ func (s *Solver) makeTimestamp() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
+// ImageContainsObject checks if an image contains an hCaptcha object.
+func (s *Solver) ImageContainsObject(image, object string) (bool, error) {
+	if object == "motorbus" { // why hCaptcha... why
+		object = "bus"
+	}
+
+	resp, err := http.Get(image)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	img, err := vision.NewImageFromReader(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	annotations, err := s.vision.LocalizeObjects(context.Background(), img, nil)
+	if err != nil {
+		return false, err
+	}
+
+	if len(annotations) == 0 {
+		return false, errors.New("no objects appear in image")
+	}
+
+	for _, annotation := range annotations {
+		if strings.ToLower(annotation.Name) == strings.ToLower(object) && annotation.Score > 0.50 {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // NewSolver creates a new instance of an HCaptcha solver.
 func NewSolver(site string, workers ...int) (*Solver, error) {
 	if len(workers) == 0 {
@@ -235,7 +283,14 @@ func NewSolver(site string, workers ...int) (*Solver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Solver{log: log, site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
+	ctx := context.Background()
+
+	client, err := vision.NewImageAnnotatorClient(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	return &Solver{vision: client, log: log, site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.

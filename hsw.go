@@ -15,6 +15,7 @@ type HSW struct {
 	// C and N are tokens used by HCaptcha on the getcaptcha endpoint as a form of authorization.
 	// These can not be easily spoofed, as they contain browser/device level data.
 	C, N string
+	Uses int
 }
 
 // HSWWorker is a worker for an HSW pool.
@@ -75,7 +76,6 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 				break
 			}
 			if err != nil {
-				pool.log.Error(err)
 				continue
 			}
 			pool.hswPoolMutex.Lock()

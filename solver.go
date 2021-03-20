@@ -23,6 +23,7 @@ type Solver struct {
 	hswPool       *HSWPool
 	sRand         *rand.Rand
 	userAgent     string
+	log           *logrus.Logger
 }
 
 // Task is a task assigned by HCaptcha.
@@ -53,6 +54,7 @@ func (s *Solver) Solve(deadline time.Time) (string, error) {
 				code, lastHSW, err = s.SolveOnce()
 			}
 			if err != nil {
+				s.log.Error(err)
 				continue
 			}
 			return code, nil
@@ -116,7 +118,7 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 	var tasks []Task
 	err = json.Unmarshal([]byte(response.Get("tasklist").String()), &tasks)
 	if err != nil {
-		return "", hsw[0], err
+		return "", hsw[0], errors.New(string(b))
 	}
 
 	key := response.Get("key").String()
@@ -226,11 +228,14 @@ func NewSolver(site string, workers ...int) (*Solver, error) {
 		workers = append(workers, DefaultWorkerAmount, DefaultHWSLimit)
 	}
 	siteKey := uuid.New().String()
-	pool, err := NewHSWPool(site, siteKey, DefaultScriptUrl, logrus.New(), workers[1], workers[0])
+	log := logrus.New()
+	log.Formatter = &logrus.TextFormatter{ForceColors: true}
+	log.Level = logrus.DebugLevel
+	pool, err := NewHSWPool(site, siteKey, DefaultScriptUrl, log, workers[1], workers[0])
 	if err != nil {
 		return nil, err
 	}
-	return &Solver{site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
+	return &Solver{log: log, site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.

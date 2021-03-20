@@ -1,9 +1,7 @@
 # hcaptcha-solver-go
 
 An HCaptcha solver for GoLang.
-It uses a Playwright tab with the HSW script injected to generate HSW
-on the fly, and then pipes that to other go routines which are made to purely
-solve HCaptchas until it gets a password UUID.
+It uses Playwright for generating HSW which is put in an HSW pool, which can then be accessed by a solver to solve captchas.
 
 # Usage
 Below are some usage examples on how you would use the solver.
@@ -47,7 +45,7 @@ fmt.Println(solution)
 # Resources
 
 ## [JimmyLaurent's HCaptcha Solver in JS](https://github.com/JimmyLaurent/hcaptcha-solver)
-JimmyLaurent's solver was a big help with the core structure of HCaptcha's API.
+JimmyLaurent's helped a lot with the core structure of HCaptcha's API.
 If you are interested in building your own solver, I would check out his repository,
 although it is a bit outdated.
 

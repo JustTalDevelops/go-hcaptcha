@@ -3,18 +3,27 @@ package main
 import (
 	"fmt"
 	"github.com/justtaldevelops/hcaptcha-solver-go"
+	"os"
 	"time"
 )
 
 func main() {
-	s, err := hcaptcha.NewSolver("minecraftpocket-servers.com", 1, 1)
+	// In order to use Vision API, you need to set this environment variable.
+	err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "C:\\Users\\JustTal\\VisionAPI\\Project.json")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create the solver with the default options.
+	s, err := hcaptcha.NewSolver("minecraftpocket-servers.com")
 	if err != nil {
 		panic(err)
 	}
 	defer s.Close()
+
 	// We provide a deadline that the solver must have the solution done by.
 	// If the deadline is not reached, an error is sent instead of the solution.
-	solution, err := s.Solve(time.Now().Add(5 * time.Minute))
+	solution, err := s.Solve(time.Now().Add(3 * time.Minute))
 	if err != nil {
 		panic(err)
 	}

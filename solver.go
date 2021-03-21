@@ -1,6 +1,7 @@
 package hcaptcha
 
 import (
+	"bytes"
 	vision "cloud.google.com/go/vision/apiv1"
 	"context"
 	"encoding/json"
@@ -17,16 +18,39 @@ import (
 	"time"
 )
 
+// MotionData contains motion data, just used for JSON requests.
+type MotionData struct {
+	Start       int64      `json:"st"`
+	Destination int64      `json:"dct"`
+	Movements   [][3]int64 `json:"mm"`
+}
+
 // Solver is an HCaptcha solver instance.
 type Solver struct {
 	site, siteKey string
-	hswScriptUrl  string
 	proxies       []string
 	hswPool       *HSWPool
 	sRand         *rand.Rand
 	userAgent     string
 	log           *logrus.Logger
 	vision        *vision.ImageAnnotatorClient
+	client        *http.Client
+}
+
+// SolverOptions contains special options that can be applied to new solvers.
+type SolverOptions struct {
+	// WorkerSize is the amount of workers that should be used. The default is 1.
+	WorkerSize int
+	// HwsLimit is the limit of HSW in the pool. The default is 3.
+	HwsLimit int
+	// ScriptUrl is the HSW script URL being used.
+	ScriptUrl string
+	// SiteKey is the site key of the domain.
+	SiteKey string
+	// UserAgent is the user agent of the solver.
+	UserAgent string
+	// Log is the Logrus logger.
+	Log *logrus.Logger
 }
 
 // Task is a task assigned by HCaptcha.
@@ -45,21 +69,18 @@ func (s *Solver) ProxiesEnabled() bool {
 // Solve attempts to solve once until a successful code appears.
 // It returns an error if it fails to solve the code before the deadline.
 func (s *Solver) Solve(deadline time.Time) (string, error) {
+	start := time.Now()
 	for {
 		var code string
-		var lastHSW HSW
 		var err error
 
 		if deadline.After(time.Now()) {
-			if lastHSW.C != "" && lastHSW.N != "" {
-				code, lastHSW, err = s.SolveOnce(lastHSW)
-			} else {
-				code, lastHSW, err = s.SolveOnce()
-			}
+			code, err = s.SolveOnce()
 			if err != nil {
 				s.log.Error(err)
 				continue
 			}
+			s.log.Info("Solved in less than ", time.Now().Sub(start).Seconds(), " seconds!")
 			return code, nil
 		} else {
 			return "", errors.New("failed to solve captcha before deadline")
@@ -69,60 +90,58 @@ func (s *Solver) Solve(deadline time.Time) (string, error) {
 
 // SolveOnce attempts to solve once. If successful,
 // it returns a code and otherwise returns an error.
-func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
-	if len(hsw) == 0 {
-		latestHSW, err := s.hswPool.GetHSW()
-		if err != nil {
-			return "", HSW{}, err
-		}
-
-		hsw = append(hsw, latestHSW)
-	}
-
-	timestamp := s.makeTimestamp() + s.randomFromRange(30, 120)
-	movements, err := s.getMouseMovements(timestamp)
+func (s *Solver) SolveOnce() (code string, err error) {
+	c, err := s.hswPool.GetHSW()
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 
-	motionData := url.Values{}
-	motionData.Add("st", strconv.Itoa(int(timestamp)))
-	motionData.Add("dct", strconv.Itoa(int(timestamp)))
-	motionData.Add("mm", movements)
+	n, err := evaluateHsw(s, c)
+	if err != nil {
+		return "", err
+	}
 
 	form := url.Values{}
 	form.Add("sitekey", s.siteKey)
 	form.Add("host", s.site)
-	form.Add("n", hsw[0].N)
-	form.Add("c", hsw[0].C)
-	form.Add("motionData", motionData.Encode())
+	form.Add("hl", "en")
+	form.Add("motionData", "{}")
+	form.Add("n", n)
+	form.Add("c", c)
 
 	req, err := http.NewRequest("POST", "https://hcaptcha.com/getcaptcha", strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authority", "hcaptcha.com")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", s.userAgent)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "https://assets.hcaptcha.com")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	req.Header.Set("Sec-Fetch-Mode", "cors")
+	req.Header.Set("Sec-Fetch-Dest", "empty")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 	response := gjson.Parse(string(b))
 	resp.Body.Close()
 	if response.Get("generated_pass_UUID").Exists() {
-		return response.Get("generated_pass_UUID").String(), HSW{}, nil
+		return response.Get("generated_pass_UUID").String(), nil
 	}
 
 	var tasks []Task
 	err = json.Unmarshal([]byte(response.Get("tasklist").String()), &tasks)
 	if err != nil {
-		return "", hsw[0], errors.New(string(b))
+		return "", errors.New(string(b))
 	}
 
 	prompt := strings.Split(response.Get("requester_question").Get("en").String(), " ")
@@ -130,61 +149,91 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 	key := response.Get("key").String()
 	job := response.Get("request_type").String()
 
-	taskResponses := make(map[string][]string)
+	timestamp := s.makeTimestamp()
+
+	var motionDataJson MotionData
+	motionDataJson.Start = timestamp
+	motionDataJson.Destination = timestamp
+	motionDataJson.Movements = [][3]int64{}
+
+	b, err = json.Marshal(motionDataJson)
+	if err != nil {
+		return "", err
+	}
+
+	var formJson struct {
+		Job        string            `json:"job_mode"`
+		Answers    map[string]string `json:"answers"`
+		Domain     string            `json:"serverdomain"`
+		SiteKey    string            `json:"sitekey"`
+		MotionData string            `json:"motionData"`
+		N          string            `json:"n"`
+		C          string            `json:"c"`
+	}
+
+	formJson.Answers = make(map[string]string)
+	object := prompt[len(prompt)-1]
+
 	for _, t := range tasks {
-		var ok bool
 		if s.vision == nil {
-			ok = s.randomTrueFalse()
+			formJson.Answers[t.Key] = strconv.FormatBool(s.randomTrueFalse())
 		} else {
-			ok, err = s.ImageContainsObject(t.Image, prompt[len(prompt)-1])
+			ok, err := s.ImageContainsObject(t.Image, object)
 			if err != nil {
 				s.log.Error(err)
 			}
+			s.log.Info(t.Image, " ", object, " ", ok)
+			formJson.Answers[t.Key] = strconv.FormatBool(ok)
 		}
-		taskResponses[t.Key] = []string{strconv.FormatBool(ok)}
 	}
 
-	timestamp = s.makeTimestamp() + s.randomFromRange(30, 120)
-	movements, err = s.getMouseMovements(timestamp)
+	n, err = evaluateHsw(s, c)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 
-	motionData = url.Values{}
-	motionData.Add("st", strconv.Itoa(int(timestamp)))
-	motionData.Add("dct", strconv.Itoa(int(timestamp)))
-	motionData.Add("mm", movements)
+	formJson.Job = job
+	formJson.Domain = s.site
+	formJson.SiteKey = s.siteKey
+	formJson.MotionData = string(b)
+	formJson.N = n
+	formJson.C = c
 
-	form = url.Values{}
-	form.Add("answers", url.Values(taskResponses).Encode())
-	form.Add("sitekey", s.siteKey)
-	form.Add("serverdomain", s.site)
-	form.Add("job_mode", job)
-	form.Add("motionData", motionData.Encode())
-
-	req, err = http.NewRequest("POST", "https://hcaptcha.com/checkcaptcha/"+key, strings.NewReader(form.Encode()))
+	b, err = json.Marshal(formJson)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	req, err = http.NewRequest("POST", "https://hcaptcha.com/checkcaptcha/"+key, bytes.NewBuffer(b))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authority", "hcaptcha.com")
+	req.Header.Set("Accept", "*/*")
 	req.Header.Set("User-Agent", s.userAgent)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "https://assets.hcaptcha.com")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	req.Header.Set("Sec-Fetch-Mode", "cors")
+	req.Header.Set("Sec-Fetch-Dest", "empty")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = s.client.Do(req)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 
 	b, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", HSW{}, err
+		return "", err
 	}
 	response = gjson.Parse(string(b))
 	resp.Body.Close()
 	if response.Get("generated_pass_UUID").Exists() {
-		return response.Get("generated_pass_UUID").String(), HSW{}, nil
+		return response.Get("generated_pass_UUID").String(), nil
 	}
 
-	return "", hsw[0], errors.New(string(b))
+	return "", errors.New(string(b))
 }
 
 // Close closes all workers currently running.
@@ -212,21 +261,6 @@ func (s *Solver) UpdateUserAgent(userAgent string) {
 // randomTrueFalse returns a random boolean to be used in task responses.
 func (s *Solver) randomTrueFalse() bool {
 	return s.sRand.Intn(2) == 1
-}
-
-// getMouseMovements returns random mouse movements based on a timestamp.
-func (s *Solver) getMouseMovements(timestamp int64) (string, error) {
-	motionCount := s.randomFromRange(8000, 10000)
-	var mouseMovements [][3]int64
-	for i := 0; i < int(motionCount); i++ {
-		timestamp += s.randomFromRange(0, 10)
-		mouseMovements = append(mouseMovements, [3]int64{s.randomFromRange(0, 500), s.randomFromRange(0, 500), timestamp})
-	}
-	b, err := json.Marshal(mouseMovements)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
 
 // randomFromRange generates a random number from the range provided.
@@ -261,10 +295,6 @@ func (s *Solver) ImageContainsObject(image, object string) (bool, error) {
 		return false, err
 	}
 
-	if len(annotations) == 0 {
-		return false, errors.New("no objects appear in image")
-	}
-
 	for _, annotation := range annotations {
 		if strings.Contains(strings.ToLower(annotation.Name), strings.ToLower(object)) && annotation.Score > 0.50 {
 			return true, nil
@@ -275,28 +305,38 @@ func (s *Solver) ImageContainsObject(image, object string) (bool, error) {
 }
 
 // NewSolver creates a new instance of an HCaptcha solver.
-func NewSolver(site string, workers ...int) (*Solver, error) {
-	if len(workers) == 0 {
-		workers = append(workers, DefaultWorkerAmount, DefaultHWSLimit)
+func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
+	if len(opts) == 0 {
+		log := logrus.New()
+		log.Formatter = &logrus.TextFormatter{ForceColors: true}
+		log.Level = logrus.DebugLevel
+		opts = append(opts, SolverOptions{
+			WorkerSize: DefaultWorkerAmount,
+			HwsLimit:   DefaultHWSLimit,
+			ScriptUrl:  DefaultScriptUrl,
+			UserAgent:  DefaultUserAgent,
+			SiteKey:    uuid.New().String(),
+			Log:        log,
+		})
 	}
-	siteKey := uuid.New().String()
-	log := logrus.New()
-	log.Formatter = &logrus.TextFormatter{ForceColors: true}
-	log.Level = logrus.DebugLevel
-	pool, err := NewHSWPool(site, siteKey, DefaultScriptUrl, log, workers[1], workers[0])
+	pool, err := NewHSWPool(site, opts[0].SiteKey, opts[0].ScriptUrl, opts[0].Log, opts[0].HwsLimit, opts[0].WorkerSize)
 	if err != nil {
 		return nil, err
 	}
 	ctx := context.Background()
 
-	client, _ := vision.NewImageAnnotatorClient(ctx)
+	client, err := vision.NewImageAnnotatorClient(ctx)
+	if err != nil {
+		opts[0].Log.Error(err)
+		opts[0].Log.Error("You can ignore the above error if you aren't using Vision API.")
+	}
 
-	return &Solver{vision: client, log: log, site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
+	return &Solver{client: &http.Client{}, vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.
-func NewSolverWithProxies(site string, proxies []string, workers ...int) (s *Solver, err error) {
-	s, err = NewSolver(site, workers...)
+func NewSolverWithProxies(site string, proxies []string, opts ...SolverOptions) (s *Solver, err error) {
+	s, err = NewSolver(site, opts...)
 	if err != nil {
 		return
 	}

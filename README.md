@@ -8,9 +8,7 @@ Vision API uses the Google Vision API to solve captchas.
 It uses the object that we need to find, along with every image in the captcha's
 task list to find the ones that match.
 
-This would replace the random guessing that we do, and make captcha solving
-much faster. Of course, there would still be an option to use the random guessing
-if you aren't willing to use Vision API.
+The solver uses it, mostly because it's the most reliable out there & it's quite easy to sign up for (basically free if you get the $300 free credit.)
 
 ![An example of the Vision API with one of HCaptcha's images.](./images/bus_example.png)
 

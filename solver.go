@@ -132,10 +132,14 @@ func (s *Solver) SolveOnce(hsw ...HSW) (code string, lastHSW HSW, err error) {
 
 	taskResponses := make(map[string][]string)
 	for _, t := range tasks {
-		ok, err := s.ImageContainsObject(t.Image, prompt[len(prompt)-1])
-		if err != nil {
-			// The user probably does not have Vision API set up, so we just choose a random true or false value
+		var ok bool
+		if s.vision == nil {
 			ok = s.randomTrueFalse()
+		} else {
+			ok, err = s.ImageContainsObject(t.Image, prompt[len(prompt)-1])
+			if err != nil {
+				s.log.Error(err)
+			}
 		}
 		taskResponses[t.Key] = []string{strconv.FormatBool(ok)}
 	}
@@ -262,7 +266,7 @@ func (s *Solver) ImageContainsObject(image, object string) (bool, error) {
 	}
 
 	for _, annotation := range annotations {
-		if strings.ToLower(annotation.Name) == strings.ToLower(object) && annotation.Score > 0.50 {
+		if strings.Contains(strings.ToLower(annotation.Name), strings.ToLower(object)) && annotation.Score > 0.50 {
 			return true, nil
 		}
 	}
@@ -285,10 +289,7 @@ func NewSolver(site string, workers ...int) (*Solver, error) {
 	}
 	ctx := context.Background()
 
-	client, err := vision.NewImageAnnotatorClient(ctx)
-	if err != nil {
-		panic(err)
-	}
+	client, _ := vision.NewImageAnnotatorClient(ctx)
 
 	return &Solver{vision: client, log: log, site: site, siteKey: siteKey, hswScriptUrl: DefaultScriptUrl, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: DefaultUserAgent}, nil
 }

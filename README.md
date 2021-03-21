@@ -1,7 +1,7 @@
 # hcaptcha-solver-go
 
 An HCaptcha solver for GoLang.
-It uses Playwright for generating HSW which is put in an HSW pool, which can then be accessed by a solver to solve captchas.
+It uses Playwright for generating HSW which is then used by solver's with ongoing solving tasks.
 
 ##  Vision API
 Vision API uses the Google Vision API to solve captchas.

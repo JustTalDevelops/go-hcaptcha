@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -174,18 +175,27 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	formJson.Answers = make(map[string]string)
 	object := prompt[len(prompt)-1]
 
+	var wg sync.WaitGroup
 	for _, t := range tasks {
 		if s.vision == nil {
 			formJson.Answers[t.Key] = strconv.FormatBool(s.randomTrueFalse())
 		} else {
-			ok, err := s.ImageContainsObject(t.Image, object)
-			if err != nil {
-				s.log.Error(err)
-			}
-			s.log.Info(t.Image, " ", object, " ", ok)
-			formJson.Answers[t.Key] = strconv.FormatBool(ok)
+			img := t.Image
+			key := t.Key
+			wg.Add(1)
+			go func() {
+				ok, err := s.ImageContainsObject(img, object)
+				if err != nil {
+					s.log.Error(err)
+				}
+				s.log.Info(img, " ", object, " ", ok)
+				formJson.Answers[key] = strconv.FormatBool(ok)
+				wg.Done()
+			}()
 		}
 	}
+
+	wg.Wait()
 
 	n, err = evaluateHsw(s, c)
 	if err != nil {

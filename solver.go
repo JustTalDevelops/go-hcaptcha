@@ -102,6 +102,14 @@ func (s *Solver) SolveOnce() (code string, err error) {
 		return "", err
 	}
 
+	timestamp := s.makeTimestamp() + s.randomFromRange(30, 120)
+	movements, err := s.getMouseMovements(timestamp)
+
+	motionData := url.Values{}
+	motionData.Add("st", strconv.Itoa(int(timestamp)))
+	motionData.Add("dct", strconv.Itoa(int(timestamp)))
+	motionData.Add("mm", movements)
+
 	form := url.Values{}
 	form.Add("sitekey", s.siteKey)
 	form.Add("host", s.site)
@@ -150,12 +158,12 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	key := response.Get("key").String()
 	job := response.Get("request_type").String()
 
-	timestamp := s.makeTimestamp()
+	timestamp = s.makeTimestamp()
 
 	var motionDataJson MotionData
 	motionDataJson.Start = timestamp
 	motionDataJson.Destination = timestamp
-	motionDataJson.Movements = [][3]int64{}
+	motionDataJson.Movements = s.getRawMouseMovements(timestamp)
 
 	b, err = json.Marshal(motionDataJson)
 	if err != nil {
@@ -372,4 +380,24 @@ func NewSolverWithProxies(site string, proxies []string, opts ...SolverOptions) 
 	}
 
 	return
+}
+
+// getRawMouseMovements returns random mouse movements based on a timestamp.
+func (s *Solver) getRawMouseMovements(timestamp int64) (mouseMovements [][3]int64) {
+	motionCount := s.randomFromRange(8000, 10000)
+	for i := 0; i < int(motionCount); i++ {
+		timestamp += s.randomFromRange(0, 10)
+		mouseMovements = append(mouseMovements, [3]int64{s.randomFromRange(0, 500), s.randomFromRange(0, 500), timestamp})
+	}
+
+	return
+}
+
+// getMouseMovements returns random mouse movements based on a timestamp.
+func (s *Solver) getMouseMovements(timestamp int64) (string, error) {
+	b, err := json.Marshal(s.getRawMouseMovements(timestamp))
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

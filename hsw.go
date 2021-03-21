@@ -10,14 +10,6 @@ import (
 	"sync"
 )
 
-// HSW is an HSW token, containing both the C and N values used for requests to HCaptcha.
-type HSW struct {
-	// C and N are tokens used by HCaptcha on the getcaptcha endpoint as a form of authorization.
-	// These can not be easily spoofed, as they contain browser/device level data.
-	C, N string
-	Uses int
-}
-
 // HSWWorker is a worker for an HSW pool.
 // Workers should always be created through the NewWorker function.
 type HSWWorker struct {
@@ -61,13 +53,13 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 	}
 
 	go func() {
-		var hsw HSW
+		var c string
 		for {
 			if len(pool.hswPool) == pool.poolLimit {
 				// We don't want to overfill the pool with entries that it is never going to touch, so we continue until the pool shrinks.
 				continue
 			}
-			hsw, err = generateHsw(worker)
+			c, err = generateHsw(worker)
 
 			// We run the check after the HSW has been generated,
 			// because we are more likely to be already generating HSW
@@ -79,7 +71,7 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 				continue
 			}
 			pool.hswPoolMutex.Lock()
-			pool.hswPool = append(pool.hswPool, hsw)
+			pool.hswPool = append(pool.hswPool, c)
 			pool.hswPoolMutex.Unlock()
 		}
 	}()
@@ -90,7 +82,7 @@ func NewWorker(pool *HSWPool) (*HSWWorker, error) {
 // HSWPool is a pool of HSW tokens that get regenerated on the fly by HSW workers.
 // These are used to generate valid captcha codes.
 type HSWPool struct {
-	hswPool       []HSW
+	hswPool       []string
 	hswPoolMutex  *sync.Mutex
 	workers       []*HSWWorker
 	hswScriptUrl  *string
@@ -139,10 +131,10 @@ func (h *HSWPool) ActiveWorkers() (active bool) {
 }
 
 // GetHSW gets a new HSW token from the HSW pool.
-func (h *HSWPool) GetHSW() (HSW, error) {
+func (h *HSWPool) GetHSW() (string, error) {
 	for {
 		if !h.ActiveWorkers() {
-			return HSW{}, errors.New("no active workers found")
+			return "", errors.New("no active workers found")
 		}
 		if len(h.hswPool) != 0 {
 			h.hswPoolMutex.Lock()
@@ -165,32 +157,31 @@ func (h *HSWPool) Close() {
 	}
 }
 
-// generateHsw sends a request to the HCaptcha site config system for a HSW token.
-// Then, we use the original token provided to us to generate HSW to send in our captcha requests.
-// The HSW is generated through Playwright. On initial startup, Playwright (running Firefox, WebKit seems to fail)
-// opens a new empty tab, injects the HSW script by HCaptcha, and then evaluates the HSW using the page evaluate
-// function. It then returns the response, plus the HSW token and an error in case anything went wrong.
-func generateHsw(worker *HSWWorker) (hsw HSW, err error) {
+// evaluateHsw gets the C token for an hCaptcha n token, and returns it.
+func evaluateHsw(s *Solver, c string) (string, error) {
+	worker := s.hswPool.workers[s.sRand.Intn(len(s.hswPool.workers))]
+	pResp, err := worker.playwrightPage.Evaluate("hsw(\"" + gjson.Get(c, "req").String() + "\");")
+	if err != nil {
+		return "", err
+	}
+	return pResp.(string), nil
+}
+
+// generateHsw sends a request to the HCaptcha site config system for a HSW token and returns that token.
+func generateHsw(worker *HSWWorker) (c string, err error) {
 	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+worker.pool.host+"&sitekey="+worker.pool.siteKey+"&sc=1&swa=1", nil)
 	if err != nil {
-		return HSW{}, err
+		return "", err
 	}
 	req.Header.Set("User-Agent", worker.pool.userAgent)
 	resp, err := worker.client.Do(req)
 	if err != nil {
-		return HSW{}, err
+		return "", err
 	}
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return HSW{}, err
+		return "", err
 	}
 	result := gjson.ParseBytes(b)
-	pResp, err := worker.playwrightPage.Evaluate("hsw(\"" + result.Get("c.req").String() + "\");")
-	if err != nil {
-		return HSW{}, err
-	}
-	return HSW{
-		C: result.Get("c").String(),
-		N: pResp.(string),
-	}, nil
+	return result.Get("c").String(), nil
 }

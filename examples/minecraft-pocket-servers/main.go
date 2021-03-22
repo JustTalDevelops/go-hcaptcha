@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/justtaldevelops/hcaptcha-solver-go"
-	"github.com/sirupsen/logrus"
 	"os"
 	"time"
 )
@@ -15,19 +14,9 @@ func main() {
 		panic(err)
 	}
 
-	// Create a logger to use
-	log := logrus.New()
-	log.Formatter = &logrus.TextFormatter{ForceColors: true}
-	log.Level = logrus.DebugLevel
-
 	// Create the solver with the default options.
 	s, err := hcaptcha.NewSolver("minecraftpocket-servers.com", hcaptcha.SolverOptions{
-		WorkerSize: hcaptcha.DefaultWorkerAmount,
-		HwsLimit:   hcaptcha.DefaultHWSLimit,
-		ScriptUrl:  hcaptcha.DefaultScriptUrl,
-		UserAgent:  hcaptcha.DefaultUserAgent,
-		SiteKey:    "e6b7bb01-42ff-4114-9245-3d2b7842ed92",
-		Log:        log,
+		SiteKey: "e6b7bb01-42ff-4114-9245-3d2b7842ed92",
 	})
 	if err != nil {
 		panic(err)

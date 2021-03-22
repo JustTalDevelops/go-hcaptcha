@@ -325,18 +325,37 @@ func (s *Solver) ImageContainsObject(image, object string) (bool, error) {
 // NewSolver creates a new instance of an HCaptcha solver.
 func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 	if len(opts) == 0 {
-		log := logrus.New()
-		log.Formatter = &logrus.TextFormatter{ForceColors: true}
-		log.Level = logrus.DebugLevel
-		opts = append(opts, SolverOptions{
-			WorkerSize: DefaultWorkerAmount,
-			HwsLimit:   DefaultHWSLimit,
-			ScriptUrl:  DefaultScriptUrl,
-			UserAgent:  DefaultUserAgent,
-			SiteKey:    uuid.New().String(),
-			Log:        log,
-		})
+		opts = append(opts, SolverOptions{})
 	}
+
+	// Default options checks
+	if opts[0].WorkerSize == 0 {
+		opts[0].WorkerSize = DefaultWorkerAmount
+	}
+
+	if opts[0].HwsLimit == 0 {
+		opts[0].HwsLimit = DefaultHWSLimit
+	}
+
+	if opts[0].ScriptUrl == "" {
+		opts[0].ScriptUrl = DefaultScriptUrl
+	}
+
+	if opts[0].UserAgent == "" {
+		opts[0].UserAgent = DefaultUserAgent
+	}
+
+	if opts[0].SiteKey == "" {
+		opts[0].SiteKey = uuid.New().String()
+	}
+
+	if opts[0].Log == nil {
+		opts[0].Log = logrus.New()
+		opts[0].Log.Formatter = &logrus.TextFormatter{ForceColors: true}
+		opts[0].Log.Level = logrus.DebugLevel
+	}
+
+	// Initialize the pool
 	pool, err := NewHSWPool(site, opts[0].SiteKey, opts[0].ScriptUrl, opts[0].Log, opts[0].HwsLimit, opts[0].WorkerSize)
 	if err != nil {
 		return nil, err

@@ -67,7 +67,7 @@ JimmyLaurent's helped a lot with the core structure of HCaptcha's API.
 If you are interested in building your own solver, I would check out his repository,
 although it is a bit outdated.
 
-## [aw1875's HCaptcha Solver using Puppeteer](https://github.com/JimmyLaurent/hcaptcha-solver)
+## [aw1875's HCaptcha Solver using Puppeteer](https://github.com/aw1875/puppeteer-hcaptcha)
 aw1875 was a big help with the issues I was encountering with my own implementation.
 His implementation is much more up to date then Jimmy Laurent's, so if you're 
 a JS developer, I would recommend using his work.

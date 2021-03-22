@@ -3,6 +3,8 @@
 An HCaptcha solver for GoLang.
 It uses Playwright for generating HSW which is then used by solver's with ongoing solving tasks.
 
+![Speed.](images/solver_speed.gif)
+
 ##  Vision API
 Vision API uses the Google Vision API to solve captchas.
 It uses the object that we need to find, along with every image in the captcha's

@@ -256,7 +256,9 @@ func (s *Solver) SolveOnce() (code string, err error) {
 
 // Close closes all workers currently running.
 func (s *Solver) Close() {
-	s.vision.Close()
+	if s.vision != nil {
+		s.vision.Close()
+	}
 	s.hswPool.Close()
 }
 

@@ -41,17 +41,17 @@ type Solver struct {
 // SolverOptions contains special options that can be applied to new solvers.
 type SolverOptions struct {
 	// WorkerSize is the amount of workers that should be used. The default is 1.
-	WorkerSize int
+	WorkerSize int `json:"worker_size"`
 	// HwsLimit is the limit of HSW in the pool. The default is 3.
-	HwsLimit int
+	HwsLimit int `json:"hws_limit"`
 	// ScriptUrl is the HSW script URL being used.
-	ScriptUrl string
+	ScriptUrl string `json:"script_url"`
 	// SiteKey is the site key of the domain.
-	SiteKey string
+	SiteKey string `json:"site_key"`
 	// UserAgent is the user agent of the solver.
-	UserAgent string
+	UserAgent string `json:"user_agent"`
 	// Log is the Logrus logger.
-	Log *logrus.Logger
+	Log *logrus.Logger `json:"~"`
 }
 
 // Task is a task assigned by HCaptcha.

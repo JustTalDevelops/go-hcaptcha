@@ -35,7 +35,6 @@ type Solver struct {
 	userAgent     string
 	log           *logrus.Logger
 	vision        *vision.ImageAnnotatorClient
-	client        *http.Client
 }
 
 // SolverOptions contains special options that can be applied to new solvers.
@@ -92,6 +91,16 @@ func (s *Solver) Solve(deadline time.Time) (string, error) {
 // SolveOnce attempts to solve once. If successful,
 // it returns a code and otherwise returns an error.
 func (s *Solver) SolveOnce() (code string, err error) {
+	var client *http.Client
+	if s.ProxiesEnabled() {
+		client, err = s.getRandomProxiedClient()
+		if err != nil {
+			return
+		}
+	} else {
+		client = http.DefaultClient
+	}
+
 	c, err := s.hswPool.GetHSW()
 	if err != nil {
 		return "", err
@@ -114,7 +123,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	form.Add("sitekey", s.siteKey)
 	form.Add("host", s.site)
 	form.Add("hl", "en")
-	form.Add("motionData", "{}")
+	form.Add("motionData", motionData.Encode())
 	form.Add("n", n)
 	form.Add("c", c)
 
@@ -132,7 +141,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	req.Header.Set("Sec-Fetch-Dest", "empty")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err := s.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -236,7 +245,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	req.Header.Set("Sec-Fetch-Dest", "empty")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
-	resp, err = s.client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -370,7 +379,7 @@ func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 		opts[0].Log.Error("You can ignore the above error if you aren't using Vision API.")
 	}
 
-	return &Solver{client: &http.Client{}, vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
+	return &Solver{vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.
@@ -381,23 +390,32 @@ func NewSolverWithProxies(site string, proxies []string, opts ...SolverOptions) 
 	}
 	s.proxies = proxies
 	for _, w := range s.hswPool.workers {
-		p := proxies[rand.Int()%len(proxies)]
-		pSplit := strings.Split(p, ":")
-		switch len(pSplit) {
-		case 4:
-			w.client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{
-				Scheme: "http",
-				User:   url.UserPassword(pSplit[2], pSplit[3]),
-				Host:   p,
-			})}}
-		case 2:
-			w.client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{
-				Scheme: "http",
-				Host:   p,
-			})}}
-		default:
-			return nil, errors.New("invalid proxy type: must be ip, port, username, and password or ip and port")
+		w.client, err = s.getRandomProxiedClient()
+		if err != nil {
+			return
 		}
+	}
+
+	return
+}
+
+func (s *Solver) getRandomProxiedClient() (client *http.Client, err error) {
+	p := s.proxies[rand.Int()%len(s.proxies)]
+	pSplit := strings.Split(p, ":")
+	switch len(pSplit) {
+	case 4:
+		client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{
+			Scheme: "http",
+			User:   url.UserPassword(pSplit[2], pSplit[3]),
+			Host:   p,
+		})}}
+	case 2:
+		client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{
+			Scheme: "http",
+			Host:   p,
+		})}}
+	default:
+		return nil, errors.New("invalid proxy type: must be ip, port, username, and password or ip and port")
 	}
 
 	return

@@ -30,7 +30,6 @@ type MotionData struct {
 type Solver struct {
 	site, siteKey string
 	proxies       []string
-	hswPool       *HSWPool
 	sRand         *rand.Rand
 	userAgent     string
 	log           *logrus.Logger
@@ -39,10 +38,6 @@ type Solver struct {
 
 // SolverOptions contains special options that can be applied to new solvers.
 type SolverOptions struct {
-	// WorkerSize is the amount of workers that should be used. The default is 1.
-	WorkerSize int `json:"worker_size"`
-	// HwsLimit is the limit of HSW in the pool. The default is 3.
-	HwsLimit int `json:"hws_limit"`
 	// ScriptUrl is the HSW script URL being used.
 	ScriptUrl string `json:"script_url"`
 	// SiteKey is the site key of the domain.
@@ -101,22 +96,11 @@ func (s *Solver) SolveOnce() (code string, err error) {
 		client = http.DefaultClient
 	}
 
-	c, err := s.hswPool.GetHSW()
-	if err != nil {
-		return "", err
-	}
-
-	n, err := evaluateHsw(s, c)
-	if err != nil {
-		return "", err
-	}
-
 	timestamp := s.makeTimestamp() + s.randomFromRange(30, 120)
 	movements, err := s.getMouseMovements(timestamp)
 
 	motionData := url.Values{}
 	motionData.Add("st", strconv.Itoa(int(timestamp)))
-	motionData.Add("dct", strconv.Itoa(int(timestamp)))
 	motionData.Add("mm", movements)
 
 	form := url.Values{}
@@ -124,8 +108,6 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	form.Add("host", s.site)
 	form.Add("hl", "en")
 	form.Add("motionData", motionData.Encode())
-	form.Add("n", n)
-	form.Add("c", c)
 
 	req, err := http.NewRequest("POST", "https://hcaptcha.com/getcaptcha", strings.NewReader(form.Encode()))
 	if err != nil {
@@ -185,7 +167,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 		Domain     string            `json:"serverdomain"`
 		SiteKey    string            `json:"sitekey"`
 		MotionData string            `json:"motionData"`
-		N          string            `json:"n"`
+		N          interface{}       `json:"n"`
 		C          string            `json:"c"`
 	}
 
@@ -205,7 +187,6 @@ func (s *Solver) SolveOnce() (code string, err error) {
 				if err != nil {
 					s.log.Error(err)
 				}
-				s.log.Info(img, " ", object, " ", ok)
 				formJson.Answers[key] = strconv.FormatBool(ok)
 				wg.Done()
 			}()
@@ -214,17 +195,11 @@ func (s *Solver) SolveOnce() (code string, err error) {
 
 	wg.Wait()
 
-	n, err = evaluateHsw(s, c)
-	if err != nil {
-		return "", err
-	}
-
 	formJson.Job = job
 	formJson.Domain = s.site
 	formJson.SiteKey = s.siteKey
 	formJson.MotionData = string(b)
-	formJson.N = n
-	formJson.C = c
+	formJson.C = "null"
 
 	b, err = json.Marshal(formJson)
 	if err != nil {
@@ -268,18 +243,11 @@ func (s *Solver) Close() {
 	if s.vision != nil {
 		s.vision.Close()
 	}
-	s.hswPool.Close()
 }
 
 // UpdatePoolUserAgent updates both the pool and the solver's user agents.
 func (s *Solver) UpdateAllUserAgents(userAgent string) {
-	s.UpdatePoolUserAgent(userAgent)
 	s.UpdateUserAgent(userAgent)
-}
-
-// UpdatePoolUserAgent updates the pool's user agent.
-func (s *Solver) UpdatePoolUserAgent(userAgent string) {
-	s.hswPool.userAgent = userAgent
 }
 
 // UpdateUserAgent updates the solver's user agent.
@@ -339,15 +307,6 @@ func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 		opts = append(opts, SolverOptions{})
 	}
 
-	// Default options checks
-	if opts[0].WorkerSize == 0 {
-		opts[0].WorkerSize = DefaultWorkerAmount
-	}
-
-	if opts[0].HwsLimit == 0 {
-		opts[0].HwsLimit = DefaultHWSLimit
-	}
-
 	if opts[0].ScriptUrl == "" {
 		opts[0].ScriptUrl = DefaultScriptUrl
 	}
@@ -366,11 +325,6 @@ func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 		opts[0].Log.Level = logrus.DebugLevel
 	}
 
-	// Initialize the pool
-	pool, err := NewHSWPool(site, opts[0].SiteKey, opts[0].ScriptUrl, opts[0].Log, opts[0].HwsLimit, opts[0].WorkerSize)
-	if err != nil {
-		return nil, err
-	}
 	ctx := context.Background()
 
 	client, err := vision.NewImageAnnotatorClient(ctx)
@@ -379,7 +333,7 @@ func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 		opts[0].Log.Error("You can ignore the above error if you aren't using Vision API.")
 	}
 
-	return &Solver{vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, hswPool: pool, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
+	return &Solver{vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.
@@ -389,12 +343,6 @@ func NewSolverWithProxies(site string, proxies []string, opts ...SolverOptions) 
 		return
 	}
 	s.proxies = proxies
-	for _, w := range s.hswPool.workers {
-		w.client, err = s.getRandomProxiedClient()
-		if err != nil {
-			return
-		}
-	}
 
 	return
 }

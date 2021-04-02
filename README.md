@@ -1,7 +1,6 @@
 # hcaptcha-solver-go
 
 An HCaptcha solver for GoLang.
-It uses Playwright for generating HSW which is then used by solver's with ongoing solving tasks.
 
 ![Speed.](images/solver_speed.gif)
 

@@ -30,6 +30,7 @@ type MotionData struct {
 type Solver struct {
 	site, siteKey string
 	proxies       []string
+	randMu        *sync.Mutex
 	sRand         *rand.Rand
 	userAgent     string
 	log           *logrus.Logger
@@ -96,6 +97,11 @@ func (s *Solver) SolveOnce() (code string, err error) {
 		client = http.DefaultClient
 	}
 
+	n, c, err := s.hsl()
+	if err != nil {
+		return "", err
+	}
+
 	timestamp := s.makeTimestamp() + s.randomFromRange(30, 120)
 	movements, err := s.getMouseMovements(timestamp)
 
@@ -104,10 +110,13 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	motionData.Add("mm", movements)
 
 	form := url.Values{}
+	form.Add("v", "8ac1d9d")
 	form.Add("sitekey", s.siteKey)
 	form.Add("host", s.site)
 	form.Add("hl", "en")
 	form.Add("motionData", motionData.Encode())
+	form.Add("n", n)
+	form.Add("c", c)
 
 	req, err := http.NewRequest("POST", "https://hcaptcha.com/getcaptcha", strings.NewReader(form.Encode()))
 	if err != nil {
@@ -149,7 +158,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	key := response.Get("key").String()
 	job := response.Get("request_type").String()
 
-	timestamp = s.makeTimestamp()
+	timestamp += s.randomFromRange(30, 120)
 
 	var motionDataJson MotionData
 	motionDataJson.Start = timestamp
@@ -167,7 +176,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 		Domain     string            `json:"serverdomain"`
 		SiteKey    string            `json:"sitekey"`
 		MotionData string            `json:"motionData"`
-		N          interface{}       `json:"n"`
+		N          string            `json:"n"`
 		C          string            `json:"c"`
 	}
 
@@ -175,6 +184,7 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	object := prompt[len(prompt)-1]
 
 	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
 	for _, t := range tasks {
 		if s.vision == nil {
 			formJson.Answers[t.Key] = strconv.FormatBool(s.randomTrueFalse())
@@ -187,7 +197,10 @@ func (s *Solver) SolveOnce() (code string, err error) {
 				if err != nil {
 					s.log.Error(err)
 				}
+				mu.Lock()
 				formJson.Answers[key] = strconv.FormatBool(ok)
+				mu.Unlock()
+
 				wg.Done()
 			}()
 		}
@@ -195,11 +208,17 @@ func (s *Solver) SolveOnce() (code string, err error) {
 
 	wg.Wait()
 
+	n, c, err = s.hsl()
+	if err != nil {
+		return "", err
+	}
+
 	formJson.Job = job
 	formJson.Domain = s.site
 	formJson.SiteKey = s.siteKey
 	formJson.MotionData = string(b)
-	formJson.C = "null"
+	formJson.C = c
+	formJson.N = n
 
 	b, err = json.Marshal(formJson)
 	if err != nil {
@@ -238,6 +257,34 @@ func (s *Solver) SolveOnce() (code string, err error) {
 	return "", errors.New(string(b))
 }
 
+func (s *Solver) hsl() (nToken, cToken string, err error) {
+	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?host="+s.site+"&sitekey="+s.siteKey+"&sc=1&swa=1", nil)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", s.userAgent)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	response := gjson.Parse(string(b))
+	c := response.Get("c")
+
+	n, err := n(c.Get("req").String())
+	if err != nil {
+		return "", "", err
+	}
+
+	return n, c.String(), nil
+}
+
 // Close closes all workers currently running.
 func (s *Solver) Close() {
 	if s.vision != nil {
@@ -257,11 +304,15 @@ func (s *Solver) UpdateUserAgent(userAgent string) {
 
 // randomTrueFalse returns a random boolean to be used in task responses.
 func (s *Solver) randomTrueFalse() bool {
+	s.randMu.Lock()
+	defer s.randMu.Unlock()
 	return s.sRand.Intn(2) == 1
 }
 
 // randomFromRange generates a random number from the range provided.
 func (s *Solver) randomFromRange(min, max int) int64 {
+	s.randMu.Lock()
+	defer s.randMu.Unlock()
 	return int64(s.sRand.Intn(max-min) + min)
 }
 
@@ -333,7 +384,7 @@ func NewSolver(site string, opts ...SolverOptions) (*Solver, error) {
 		opts[0].Log.Error("You can ignore the above error if you aren't using Vision API.")
 	}
 
-	return &Solver{vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
+	return &Solver{randMu: &sync.Mutex{}, vision: client, log: opts[0].Log, site: site, siteKey: opts[0].SiteKey, sRand: rand.New(rand.NewSource(time.Now().UnixNano())), userAgent: opts[0].UserAgent}, nil
 }
 
 // NewSolverWithProxies creates a new instance of an HCaptcha solver, along with proxies.
@@ -355,7 +406,7 @@ func (s *Solver) getRandomProxiedClient() (client *http.Client, err error) {
 		client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{
 			Scheme: "http",
 			User:   url.UserPassword(pSplit[2], pSplit[3]),
-			Host:   p,
+			Host:   pSplit[0] + ":" + pSplit[1],
 		})}}
 	case 2:
 		client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(&url.URL{

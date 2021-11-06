@@ -25,3 +25,11 @@ func curvePoints(n int, points []Point) (curvePoints []Point) {
 	}
 	return curvePoints
 }
+
+// defaultTween is the default tween function. It is a quadratic tween function that begins fast and then decelerates.
+func defaultTween(n float64) float64 {
+	if n < 0 || n > 1 {
+		panic("parameter must be between 0.0 and 1.0")
+	}
+	return -n * (n - 2)
+}

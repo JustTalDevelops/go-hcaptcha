@@ -3,8 +3,6 @@ module github.com/justtaldevelops/hcaptcha-solver-go
 go 1.16
 
 require (
-	cloud.google.com/go v0.79.0
-	github.com/google/uuid v1.2.0
-	github.com/sirupsen/logrus v1.8.1
-	github.com/tidwall/gjson v1.6.8
+	github.com/go-vgo/robotgo v0.100.3
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
 )

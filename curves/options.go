@@ -72,7 +72,7 @@ func (h *HumanCurve) defaultCurveOpts(opts *CurveOpts) {
 		opts.DistortionMean = &distortionMean
 	}
 
-	distortionStdDev := 1.0
+	distortionStdDev := 0.6
 	if opts.DistortionStdDev == nil {
 		opts.DistortionStdDev = &distortionStdDev
 	}

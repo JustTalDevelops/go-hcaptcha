@@ -1,8 +1,5 @@
 package agents
 
-// screenSize is the size of an agents screen.
-type screenSize [2]int
-
 // Agent is used to generate user-agent specific data.
 type Agent interface {
 	// ScreenProperties returns the screen properties of the agent.
@@ -17,6 +14,9 @@ type Agent interface {
 	// ResetUnix resets the Unix timestamp with offsets to the current time.
 	ResetUnix()
 }
+
+// screenSize is the size of an agents screen.
+type screenSize [2]int
 
 // Default returns the default agent.
 func Default() Agent {

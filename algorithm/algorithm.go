@@ -4,6 +4,8 @@ package algorithm
 type Algorithm interface {
 	// Encode encodes the algorithm name as a string.
 	Encode() string
+	// Initialize is called on the algorithms' initialization.
+	Initialize()
 	// Prove returns proof (N) of the request (C).
 	Prove(request string) string
 }

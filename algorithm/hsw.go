@@ -8,6 +8,11 @@ func (h *HSW) Encode() string {
 	return "hsw"
 }
 
+// Initialize ...
+func (h *HSW) Initialize() {
+
+}
+
 // Prove ...
 func (h HSW) Prove(request string) string {
 	panic("not implemented")

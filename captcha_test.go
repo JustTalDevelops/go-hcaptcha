@@ -9,4 +9,5 @@ import (
 // TestCaptcha ...
 func TestCaptcha(t *testing.T) {
 	fmt.Println(utils.Version())
+	fmt.Println(utils.AssetVersion())
 }

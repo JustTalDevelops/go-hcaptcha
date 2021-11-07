@@ -1,4 +1,4 @@
-package agents
+package utils
 
 import (
 	"encoding/json"
@@ -15,8 +15,23 @@ var (
 	shortChromeVersion string
 )
 
-// init sets latestChromeAgent to the latest Chrome agent.
-func init() {
+// LatestChromeAgent returns the latest Chrome agent.
+func LatestChromeAgent() string {
+	return latestChromeAgent
+}
+
+// ChromeVersion returns the Chrome version.
+func ChromeVersion() string {
+	return chromeVersion
+}
+
+// ShortChromeVersion returns the Chrome version without the patch number.
+func ShortChromeVersion() string {
+	return shortChromeVersion
+}
+
+// updateAgentData updates the latest Chrome agent and Chrome version.
+func updateAgentData() {
 	resp, err := http.Get("https://jnrbsn.github.io/user-agents/user-agents.json")
 	if err != nil {
 		panic(err)

@@ -17,4 +17,5 @@ func findAlgorithm(name string) Algorithm {
 // registerAlgorithm registers an algorithm.
 func registerAlgorithm(algorithm Algorithm) {
 	algorithms[algorithm.Encode()] = algorithm
+	algorithm.Initialize()
 }

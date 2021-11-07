@@ -69,10 +69,10 @@ func (c *Chrome) NavigatorProperties() map[string]interface{} {
 		"cookieEnabled":           true,
 		"appCodeName":             "Mozilla",
 		"appName":                 "Netscape",
-		"appVersion":              "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVersion + " Safari/537.36",
+		"appVersion":              "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + utils.ChromeVersion() + " Safari/537.36",
 		"platform":                "Win32",
 		"product":                 "Gecko",
-		"userAgent":               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVersion + " Safari/537.36",
+		"userAgent":               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + utils.ChromeVersion() + " Safari/537.36",
 		"language":                "en-US",
 		"languages":               []string{"en-US"},
 		"onLine":                  true,
@@ -102,8 +102,8 @@ func (c *Chrome) NavigatorProperties() map[string]interface{} {
 		"xr":                      struct{}{},
 		"userAgentData": map[string]interface{}{
 			"brands": []map[string]interface{}{
-				{"brand": "Chromium", "version": shortChromeVersion},
-				{"brand": "Google Chrome", "version": shortChromeVersion},
+				{"brand": "Chromium", "version": utils.ShortChromeVersion()},
+				{"brand": "Google Chrome", "version": utils.ShortChromeVersion()},
 				{"brand": ";Not A Brand", "version": "99"},
 			},
 			"mobile": false,

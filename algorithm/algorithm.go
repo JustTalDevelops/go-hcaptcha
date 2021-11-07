@@ -14,12 +14,28 @@ type Algorithm interface {
 	Prove(request string) (string, error)
 }
 
+// Proof is the full proof of a request.
+type Proof struct {
+	// Algorithm is the algorithm used to provide proof.
+	Algorithm Algorithm
+	// Request is the original request (C) which was used to calculate the proof (N).
+	Request string
+	// Proof is the calculated proof (N).
+	Proof string
+}
+
 // Compile time checks to make sure HSL and HSW implement Algorithm.
 var _, _ Algorithm = (*HSL)(nil), (*HSW)(nil)
 
-// Solve solves for N given a specific algorithm and request.
-func Solve(algorithm, request string) (string, error) {
-	return findAlgorithm(algorithm).Prove(request)
+// Solve solves for N given a specific algorithm and request. It returns the full proof.
+func Solve(algorithm, request string) (Proof, error) {
+	algo := findAlgorithm(algorithm)
+	proof, err := algo.Prove(request)
+	if err != nil {
+		return Proof{}, err
+	}
+
+	return Proof{Algorithm: algo, Request: request, Proof: proof}, nil
 }
 
 // script gets the script of the algorithm from hCaptcha.

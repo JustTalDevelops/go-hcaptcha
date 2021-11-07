@@ -21,6 +21,5 @@ var (
 // init initializes the version, asset version and agent data.
 func init() {
 	updateVersion()
-	updateAgentData()
 	updateAssetVersion()
 }

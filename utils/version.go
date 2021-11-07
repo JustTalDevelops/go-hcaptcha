@@ -45,7 +45,7 @@ func updateAssetVersion() {
 		panic(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", LatestChromeAgent())
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		panic(err)

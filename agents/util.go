@@ -1,4 +1,4 @@
-package utils
+package agents
 
 import (
 	"encoding/json"
@@ -14,21 +14,6 @@ var (
 	// shortChromeVersion is initialized by init.
 	shortChromeVersion string
 )
-
-// LatestChromeAgent returns the latest Chrome agent.
-func LatestChromeAgent() string {
-	return latestChromeAgent
-}
-
-// ChromeVersion returns the Chrome version.
-func ChromeVersion() string {
-	return chromeVersion
-}
-
-// ShortChromeVersion returns the Chrome version without the patch number.
-func ShortChromeVersion() string {
-	return shortChromeVersion
-}
 
 // updateAgentData updates the latest Chrome agent and Chrome version.
 func updateAgentData() {

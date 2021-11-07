@@ -1,13 +1,9 @@
 package curves
 
 import (
+	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
 	"math"
-	"math/rand"
-	"time"
 )
-
-// sRand is a random number generator for curves.
-var sRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // Point represents a point in 2D space.
 type Point struct {
@@ -33,7 +29,7 @@ func merge(a, b []int) []Point {
 func knots(firstBoundary, secondBoundary, size int) []int {
 	result := make([]int, size)
 	for i := 0; i < size; i++ {
-		result = append(result, sRand.Intn(secondBoundary-firstBoundary)+firstBoundary)
+		result = append(result, utils.Between(firstBoundary, secondBoundary))
 	}
 	return result
 }

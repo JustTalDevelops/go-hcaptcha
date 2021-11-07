@@ -1,6 +1,7 @@
 package curves
 
 import (
+	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
 	"math"
 	"math/rand"
 )
@@ -101,7 +102,7 @@ func (h *HumanCurve) distortPoints(points []Point, distortionMean, distortionStd
 	distortedPoints := make([]Point, len(points))
 	for i := 1; i < len(points)-1; i++ {
 		point := points[i]
-		if sRand.Float64() < distortionFrequency {
+		if utils.Chance(distortionFrequency) {
 			delta := rand.NormFloat64()*distortionStdDev + distortionMean
 			distortedPoints[i] = Point{x: point.x, y: point.y + delta}
 		} else {

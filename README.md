@@ -1,3 +1,3 @@
 # go-hcaptcha
 
-An hCaptcha solver written in Go.
+A Go library for solving hCaptchas, fast. Very fast.

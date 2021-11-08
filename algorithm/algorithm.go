@@ -1,7 +1,7 @@
 package algorithm
 
 import (
-	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
+	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"io/ioutil"
 	"net/http"
 )

@@ -1,4 +1,4 @@
-module github.com/justtaldevelops/hcaptcha-solver-go
+module github.com/justtaldevelops/go-hcaptcha
 
 go 1.16
 

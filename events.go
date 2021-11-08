@@ -2,8 +2,8 @@ package hcaptcha
 
 import (
 	"github.com/iancoleman/orderedmap"
-	"github.com/justtaldevelops/hcaptcha-solver-go/agents"
-	"github.com/justtaldevelops/hcaptcha-solver-go/screen"
+	"github.com/justtaldevelops/go-hcaptcha/agents"
+	"github.com/justtaldevelops/go-hcaptcha/screen"
 )
 
 // Event is a movement event.

@@ -2,7 +2,7 @@ package agents
 
 import (
 	"github.com/iancoleman/orderedmap"
-	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
+	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"time"
 )
 

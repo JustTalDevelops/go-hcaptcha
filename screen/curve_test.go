@@ -2,7 +2,7 @@ package screen
 
 import (
 	"github.com/go-vgo/robotgo"
-	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
+	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"testing"
 	"time"
 )

@@ -1,7 +1,7 @@
 package screen
 
 import (
-	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
+	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"math"
 	"math/rand"
 )

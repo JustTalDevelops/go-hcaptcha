@@ -40,7 +40,7 @@ func (h *HSW) Encode() string {
 
 // Prove ...
 func (h HSW) Prove(request string) (string, error) {
-	resp, err := page.Evaluate(fmt.Sprintf("hsw(\"%v\")", request))
+	resp, err := page.Evaluate(fmt.Sprintf(`hsw("%v")`, request))
 	if err != nil {
 		return "", err
 	}

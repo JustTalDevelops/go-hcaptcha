@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"github.com/iancoleman/orderedmap"
 	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
 	"time"
 )
@@ -8,9 +9,9 @@ import (
 // Chrome is the agent for Google Chrome.
 type Chrome struct {
 	// screenSize is the screen size of the Chrome browser.
-	screenSize screenSize
+	screenSize [2]int
 	// availableScreenSize is the available screen size of the Chrome browser.
-	availableScreenSize screenSize
+	availableScreenSize [2]int
 	// cpuCount is the number of CPUs allowed to the Chrome browser.
 	cpuCount int
 	// memorySize is the memory size in gigabytes allowed to the Chrome browser.
@@ -21,7 +22,7 @@ type Chrome struct {
 
 // NewChrome creates a new Chrome agent.
 func NewChrome() *Chrome {
-	possibleScreenSizes := [][]screenSize{
+	possibleScreenSizes := [][][2]int{
 		{{1920, 1080}, {1920, 1040}},
 		{{2560, 1440}, {2560, 1400}},
 	}
@@ -38,93 +39,105 @@ func NewChrome() *Chrome {
 	}
 }
 
+// UserAgent ...
+func (c *Chrome) UserAgent() string {
+	return latestChromeAgent
+}
+
 // ScreenProperties ...
-func (c *Chrome) ScreenProperties() map[string]interface{} {
-	return map[string]interface{}{
-		"availWidth":  c.availableScreenSize[0],
-		"availHeight": c.availableScreenSize[1],
-		"width":       c.screenSize[0],
-		"height":      c.screenSize[1],
-		"colorDepth":  24,
-		"pixelDepth":  24,
-		"availLeft":   0,
-		"availTop":    0,
-	}
+func (c *Chrome) ScreenProperties() *orderedmap.OrderedMap {
+	m := orderedmap.New()
+	m.Set("availWidth", c.availableScreenSize[0])
+	m.Set("availHeight", c.availableScreenSize[1])
+	m.Set("width", c.screenSize[0])
+	m.Set("height", c.screenSize[1])
+	m.Set("colorDepth", 24)
+	m.Set("pixelDepth", 24)
+	m.Set("availLeft", 0)
+	m.Set("availTop", 0)
+	return m
 }
 
 // NavigatorProperties ...
-func (c *Chrome) NavigatorProperties() map[string]interface{} {
-	return map[string]interface{}{
-		"vendorSub":               "",
-		"productSub":              "20030107",
-		"vendor":                  "Google Inc.",
-		"maxTouchPoints":          0,
-		"userActivation":          struct{}{},
-		"doNotTrack":              "1",
-		"geolocation":             struct{}{},
-		"connection":              struct{}{},
-		"webkitTemporaryStorage":  struct{}{},
-		"webkitPersistentStorage": struct{}{},
-		"hardwareConcurrency":     c.cpuCount,
-		"cookieEnabled":           true,
-		"appCodeName":             "Mozilla",
-		"appName":                 "Netscape",
-		"appVersion":              "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVersion + " Safari/537.36",
-		"platform":                "Win32",
-		"product":                 "Gecko",
-		"userAgent":               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVersion + " Safari/537.36",
-		"language":                "en-US",
-		"languages":               []string{"en-US"},
-		"onLine":                  true,
-		"webdriver":               false,
-		"pdfViewerEnabled":        true,
-		"scheduling":              struct{}{},
-		"bluetooth":               struct{}{},
-		"clipboard":               struct{}{},
-		"credentials":             struct{}{},
-		"keyboard":                struct{}{},
-		"managed":                 struct{}{},
-		"mediaDevices":            struct{}{},
-		"storage":                 struct{}{},
-		"serviceWorker":           struct{}{},
-		"wakeLock":                struct{}{},
-		"deviceMemory":            c.memorySize,
-		"ink":                     struct{}{},
-		"hid":                     struct{}{},
-		"locks":                   struct{}{},
-		"mediaCapabilities":       struct{}{},
-		"mediaSession":            struct{}{},
-		"permissions":             struct{}{},
-		"presentation":            struct{}{},
-		"serial":                  struct{}{},
-		"virtualKeyboard":         struct{}{},
-		"usb":                     struct{}{},
-		"xr":                      struct{}{},
-		"userAgentData": map[string]interface{}{
-			"brands": []map[string]interface{}{
-				{"brand": "Chromium", "version": shortChromeVersion},
-				{"brand": "Google Chrome", "version": shortChromeVersion},
-				{"brand": ";Not A Brand", "version": "99"},
-			},
-			"mobile": false,
-		},
-		"plugins": []string{
-			"internal-pdf-viewer",
-			"internal-pdf-viewer",
-			"internal-pdf-viewer",
-			"internal-pdf-viewer",
-			"internal-pdf-viewer",
-		},
-	}
+func (c *Chrome) NavigatorProperties() *orderedmap.OrderedMap {
+	chromium := orderedmap.New()
+	chromium.Set("brand", "Chromium")
+	chromium.Set("version", shortChromeVersion)
+
+	chrome := orderedmap.New()
+	chrome.Set("brand", "Google Chrome")
+	chrome.Set("version", shortChromeVersion)
+
+	notAnyBrand := orderedmap.New()
+	notAnyBrand.Set("brand", ";Not A Brand")
+	notAnyBrand.Set("version", "99")
+
+	userAgentData := orderedmap.New()
+	userAgentData.Set("brands", []*orderedmap.OrderedMap{chromium, chrome, notAnyBrand})
+	userAgentData.Set("mobile", false)
+
+	m := orderedmap.New()
+	m.Set("vendorSub", "")
+	m.Set("productSub", "20030107")
+	m.Set("vendor", "Google Inc.")
+	m.Set("maxTouchPoints", 0)
+	m.Set("userActivation", struct{}{})
+	m.Set("doNotTrack", "1")
+	m.Set("geolocation", struct{}{})
+	m.Set("connection", struct{}{})
+	m.Set("webkitTemporaryStorage", struct{}{})
+	m.Set("webkitPersistentStorage", struct{}{})
+	m.Set("hardwareConcurrency", c.cpuCount)
+	m.Set("cookieEnabled", true)
+	m.Set("appCodeName", "Mozilla")
+	m.Set("appName", "Netscape")
+	m.Set("appVersion", "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+chromeVersion+" Safari/537.36")
+	m.Set("platform", "Win32")
+	m.Set("product", "Gecko")
+	m.Set("userAgent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"+chromeVersion+" Safari/537.36")
+	m.Set("language", "en-US")
+	m.Set("languages", []string{"en-US"})
+	m.Set("onLine", true)
+	m.Set("webdriver", false)
+	m.Set("pdfViewerEnabled", true)
+	m.Set("scheduling", struct{}{})
+	m.Set("bluetooth", struct{}{})
+	m.Set("clipboard", struct{}{})
+	m.Set("credentials", struct{}{})
+	m.Set("keyboard", struct{}{})
+	m.Set("managed", struct{}{})
+	m.Set("mediaDevices", struct{}{})
+	m.Set("storage", struct{}{})
+	m.Set("serviceWorker", struct{}{})
+	m.Set("wakeLock", struct{}{})
+	m.Set("deviceMemory", c.memorySize)
+	m.Set("ink", struct{}{})
+	m.Set("hid", struct{}{})
+	m.Set("locks", struct{}{})
+	m.Set("mediaCapabilities", struct{}{})
+	m.Set("mediaSession", struct{}{})
+	m.Set("permissions", struct{}{})
+	m.Set("presentation", struct{}{})
+	m.Set("serial", struct{}{})
+	m.Set("virtualKeyboard", struct{}{})
+	m.Set("usb", struct{}{})
+	m.Set("xr", struct{}{})
+	m.Set("userAgentData", userAgentData)
+	m.Set("plugins", []string{
+		"internal-pdf-viewer",
+		"internal-pdf-viewer",
+		"internal-pdf-viewer",
+		"internal-pdf-viewer",
+		"internal-pdf-viewer",
+	})
+
+	return m
 }
 
 // Unix ...
-func (c *Chrome) Unix(asMilliseconds bool) int64 {
+func (c *Chrome) Unix() int64 {
 	t := time.Now().UnixNano() / int64(time.Millisecond)
 	t += c.unixOffset
-	if !asMilliseconds {
-		t /= 1000
-	}
 
 	return t
 }

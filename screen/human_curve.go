@@ -1,4 +1,4 @@
-package curves
+package screen
 
 import (
 	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
@@ -83,8 +83,8 @@ func (*HumanCurve) generateInternalKnots(leftBoundary, rightBoundary, downBounda
 func (h *HumanCurve) generatePoints(knots []Point) []Point {
 	midPointsCount := int(math.Max(
 		math.Max(
-			math.Abs(h.fromPoint.x-h.toPoint.x),
-			math.Abs(h.fromPoint.y-h.toPoint.y),
+			math.Abs(h.fromPoint.X-h.toPoint.X),
+			math.Abs(h.fromPoint.Y-h.toPoint.Y),
 		), 2,
 	))
 
@@ -104,7 +104,7 @@ func (h *HumanCurve) distortPoints(points []Point, distortionMean, distortionStd
 		point := points[i]
 		if utils.Chance(distortionFrequency) {
 			delta := rand.NormFloat64()*distortionStdDev + distortionMean
-			distortedPoints[i] = Point{x: point.x, y: point.y + delta}
+			distortedPoints[i] = Point{X: point.X, Y: point.Y + delta}
 		} else {
 			distortedPoints[i] = point
 		}

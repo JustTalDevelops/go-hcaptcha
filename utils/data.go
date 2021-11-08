@@ -1,5 +1,7 @@
 package utils
 
+import "math/rand"
+
 var (
 	// FrameSize is the size of the hCaptcha frame.
 	FrameSize = [2]int{400, 600}
@@ -17,6 +19,18 @@ var (
 	// TilesPerRow is the number of tiles per row.
 	TilesPerRow = 3
 )
+
+// widgetCharacters are the characters used in randomly generated widget IDs.
+var widgetCharacters = []rune("abcdefghijkmnopqrstuvwxyz0123456789")
+
+// WidgetID generates a new random widget ID.
+func WidgetID() string {
+	b := make([]rune, Between(10, 12))
+	for i := range b {
+		b[i] = widgetCharacters[rand.Intn(len(widgetCharacters))]
+	}
+	return string(b)
+}
 
 // init initializes the version, asset version and agent data.
 func init() {

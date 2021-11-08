@@ -35,7 +35,7 @@ func Solve(algorithm, request string) (Proof, error) {
 		return Proof{}, err
 	}
 
-	return Proof{Algorithm: algo, Request: request, Proof: proof}, nil
+	return Proof{Algorithm: algo, Request: `{"type":"` + algo.Encode() + `","req":"` + request + `"}`, Proof: proof}, nil
 }
 
 // script gets the script of the algorithm from hCaptcha.

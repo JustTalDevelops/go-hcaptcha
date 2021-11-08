@@ -1,27 +1,22 @@
 package agents
 
+import "github.com/iancoleman/orderedmap"
+
 // Agent is used to generate user-agent specific data.
 type Agent interface {
+	// UserAgent returns the user-agent string for the agent.
+	UserAgent() string
 	// ScreenProperties returns the screen properties of the agent.
-	ScreenProperties() map[string]interface{}
+	ScreenProperties() *orderedmap.OrderedMap
 	// NavigatorProperties returns the navigator properties of the agent.
-	NavigatorProperties() map[string]interface{}
+	NavigatorProperties() *orderedmap.OrderedMap
 
 	// Unix returns the current timestamp with any added offsets.
-	Unix(asMilliseconds bool) int64
+	Unix() int64
 	// OffsetUnix offsets the Unix timestamp with the given offset.
 	OffsetUnix(offset int64)
 	// ResetUnix resets the Unix timestamp with offsets to the current time.
 	ResetUnix()
-}
-
-// screenSize is the size of an agents screen.
-type screenSize [2]int
-
-// Default returns the default agent.
-func Default() Agent {
-	// Chrome only for now, sorry!
-	return &Chrome{}
 }
 
 // Compile time check to make sure that the Agent interface is implemented by Chrome.

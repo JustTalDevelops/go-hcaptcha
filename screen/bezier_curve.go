@@ -1,4 +1,4 @@
-package curves
+package screen
 
 // bernsteinPolynomial returns a function, which, given by a list of control points, and a point (0, 1), returns
 // a point in the Bézier curve described by these points.
@@ -8,8 +8,8 @@ func bernsteinPolynomial(points []Point) func(t float64) Point {
 	return func(t float64) (res Point) {
 		for i, point := range points {
 			bern := bernsteinPolynomialPoint(t, i, n)
-			res.x += point.x * bern
-			res.y += point.y * bern
+			res.X += point.X * bern
+			res.Y += point.Y * bern
 		}
 		return res
 	}

@@ -1,4 +1,4 @@
-package curves
+package screen
 
 import (
 	"github.com/justtaldevelops/hcaptcha-solver-go/utils"
@@ -7,8 +7,8 @@ import (
 
 // Point represents a point in 2D space.
 type Point struct {
-	// x, y represent the coordinates of the point.
-	x, y float64
+	// X, Y represent the coordinates of the point.
+	X, Y float64
 }
 
 // merge does a merge on two int slices into a slice of knots.

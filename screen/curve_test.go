@@ -1,4 +1,4 @@
-package curves
+package screen
 
 import (
 	"github.com/go-vgo/robotgo"
@@ -15,7 +15,7 @@ func TestCurve(t *testing.T) {
 	humanCurve := NewHumanCurve(start, end, &CurveOpts{})
 	pause := utils.Between(5, 15)
 	for _, point := range humanCurve.points {
-		robotgo.MoveMouse(int(point.x), int(point.y))
+		robotgo.MoveMouse(int(point.X), int(point.Y))
 		time.Sleep(time.Duration(pause) * time.Millisecond)
 	}
 }

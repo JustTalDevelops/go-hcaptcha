@@ -15,8 +15,8 @@ var (
 	shortChromeVersion string
 )
 
-// updateAgentData updates the latest Chrome agent and Chrome version.
-func updateAgentData() {
+// init updates the latest Chrome agent and Chrome version.
+func init() {
 	resp, err := http.Get("https://jnrbsn.github.io/user-agents/user-agents.json")
 	if err != nil {
 		panic(err)

@@ -1,4 +1,4 @@
-package curves
+package screen
 
 import "math"
 
@@ -42,22 +42,22 @@ func (h *HumanCurve) defaultCurveOpts(opts *CurveOpts) {
 		opts.OffsetBoundaryY = &defaultOffsetBoundaryY
 	}
 
-	defaultLeftBoundary := int(math.Min(h.fromPoint.x, h.toPoint.x))
+	defaultLeftBoundary := int(math.Min(h.fromPoint.X, h.toPoint.X))
 	if opts.LeftBoundary == nil {
 		opts.LeftBoundary = &defaultLeftBoundary
 	}
 
-	defaultRightBoundary := int(math.Max(h.fromPoint.x, h.toPoint.x))
+	defaultRightBoundary := int(math.Max(h.fromPoint.X, h.toPoint.X))
 	if opts.RightBoundary == nil {
 		opts.RightBoundary = &defaultRightBoundary
 	}
 
-	defaultDownBoundary := int(math.Min(h.fromPoint.y, h.toPoint.y))
+	defaultDownBoundary := int(math.Min(h.fromPoint.Y, h.toPoint.Y))
 	if opts.DownBoundary == nil {
 		opts.DownBoundary = &defaultDownBoundary
 	}
 
-	defaultUpBoundary := int(math.Max(h.fromPoint.y, h.toPoint.y))
+	defaultUpBoundary := int(math.Max(h.fromPoint.Y, h.toPoint.Y))
 	if opts.UpBoundary == nil {
 		opts.UpBoundary = &defaultUpBoundary
 	}

@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 // Challenge is an hCaptcha challenge.
@@ -44,7 +43,7 @@ type ChallengeOptions struct {
 // Task is a task assigned by hCaptcha.
 type Task struct {
 	// Image is the image to represent the task.
-	Image string
+	Image []byte
 	// Key is the task key, used when referencing answers.
 	Key string
 	// Index is the index of the task.
@@ -80,10 +79,12 @@ func NewChallenge(url, siteKey string, opts ...ChallengeOptions) (*Challenge, er
 	c.agent.OffsetUnix(-10)
 	c.setupFrames()
 
+	c.log.Debug("Verifying site configuration...")
 	err := c.siteConfig()
 	if err != nil {
 		return nil, err
 	}
+	c.log.Info("Requesting captcha...")
 	err = c.requestCaptcha()
 	if err != nil {
 		return nil, err
@@ -94,22 +95,26 @@ func NewChallenge(url, siteKey string, opts ...ChallengeOptions) (*Challenge, er
 
 // Solve solves the challenge with the provided solver.
 func (c *Challenge) Solve(solver Solver) error {
+	c.log.Debugf("Solving challenge with %T...", solver)
 	if len(c.token) > 0 {
 		return nil
 	}
 
+	split := strings.Split(c.question, " ")
+	object := strings.Replace(strings.Replace(split[len(split)-1], "motorbus", "bus", 1), "airplane", "aeroplane", 1)
+
+	c.log.Debugf(`The type of challenge is "%v"`, c.category)
+	c.log.Debugf(`The target object is "%v"`, object)
+
 	var answers []Task
-	var answerMu sync.Mutex
 	for _, task := range c.tasks {
-		task := task
-		go func() {
-			if solver.Solve(c.category, c.question, task) {
-				answerMu.Lock()
-				answers = append(answers, task)
-				answerMu.Unlock()
-			}
-		}()
+		if solver.Solve(c.category, object, task) {
+			answers = append(answers, task)
+		}
 	}
+
+	c.log.Debugf("Decided on %v/%v of the tasks given!", len(answers), len(c.tasks))
+	c.log.Debug("Simulating mouse movements on tiles...")
 
 	c.simulateMouseMovements(answers)
 	c.agent.ResetUnix()
@@ -128,13 +133,18 @@ func (c *Challenge) Solve(solver Solver) error {
 	motionData.Set("topLevel", c.top.Data())
 	motionData.Set("v", 1)
 
+	encodedMotionData, err := json.Marshal(motionData)
+	if err != nil {
+		return err
+	}
+
 	m := orderedmap.New()
 	m.Set("v", utils.Version())
 	m.Set("job_mode", c.category)
 	m.Set("answers", answersAsMap)
 	m.Set("serverdomain", c.host)
 	m.Set("sitekey", c.siteKey)
-	m.Set("motionData", motionData)
+	m.Set("motionData", string(encodedMotionData))
 	m.Set("n", c.proof.Proof)
 	m.Set("c", c.proof.Request)
 
@@ -168,10 +178,10 @@ func (c *Challenge) Solve(solver Solver) error {
 	}
 	response := gjson.ParseBytes(b)
 	if !response.Get("pass").Bool() {
-		fmt.Println(string(b))
 		return fmt.Errorf("submit request was rejected")
 	}
 
+	c.log.Info("Successfully completed challenge!")
 	c.token = response.Get("generated_pass_UUID").String()
 	return nil
 }
@@ -282,7 +292,7 @@ func (c *Challenge) generateMouseMovements(fromPoint, toPoint screen.Point, opts
 
 	resultMovements := make([]movement, len(points))
 	for _, point := range points {
-		c.agent.OffsetUnix(int64(utils.Between(5, 15)))
+		c.agent.OffsetUnix(int64(utils.Between(2, 5)))
 		resultMovements = append(resultMovements, movement{point: point, timestamp: c.agent.Unix()})
 	}
 	return resultMovements
@@ -291,7 +301,7 @@ func (c *Challenge) generateMouseMovements(fromPoint, toPoint screen.Point, opts
 // answered returns true if the task provided is in the answers slice.
 func (c *Challenge) answered(task Task, answers []Task) bool {
 	for _, answer := range answers {
-		if answer == task {
+		if answer.Key == task.Key {
 			return true
 		}
 	}
@@ -377,8 +387,18 @@ func (c *Challenge) requestCaptcha() error {
 	c.question = response.Get("requester_question").Get("en").String()
 
 	for index, task := range response.Get("tasklist").Array() {
+		resp, err = http.Get(task.Get("datapoint_uri").String())
+		if err != nil {
+			return err
+		}
+		b, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		_ = resp.Body.Close()
+
 		c.tasks = append(c.tasks, Task{
-			Image: task.Get("datapoint_uri").String(),
+			Image: b,
 			Key:   task.Get("task_key").String(),
 			Index: index,
 		})

@@ -106,12 +106,7 @@ func (c *Challenge) Solve(solver Solver) error {
 	c.log.Debugf(`The type of challenge is "%v"`, c.category)
 	c.log.Debugf(`The target object is "%v"`, object)
 
-	var answers []Task
-	for _, task := range c.tasks {
-		if solver.Solve(c.category, object, task) {
-			answers = append(answers, task)
-		}
-	}
+	answers := solver.Solve(c.category, object, c.tasks)
 
 	c.log.Debugf("Decided on %v/%v of the tasks given!", len(answers), len(c.tasks))
 	c.log.Debug("Simulating mouse movements on tiles...")
@@ -189,6 +184,11 @@ func (c *Challenge) Solve(solver Solver) error {
 // Tasks returns the tasks for the challenge.
 func (c *Challenge) Tasks() []Task {
 	return c.tasks
+}
+
+// Logger returns the logger for the challenge.
+func (c *Challenge) Logger() *logrus.Logger {
+	return c.log
 }
 
 // Category returns the category of the challenge.

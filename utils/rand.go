@@ -17,3 +17,8 @@ func Chance(chance float64) bool {
 func Between(min, max int) int {
 	return sRand.Intn(max-min) + min
 }
+
+// BetweenFloat returns a float number between two floats.
+func BetweenFloat(min, max float64) float64 {
+	return min + sRand.Float64()*(max-min)
+}

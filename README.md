@@ -2,7 +2,7 @@
 
 A Go library for solving hCaptchas with YOLOv3 and options for other image recognition systems within twenty seconds.
 
-![Example of the solver in action with YOLOv3.](images/example.png)
+![1v1 me, bro!](images/one_vs_one.png)
 
 ## Installation
 In order to use the main YOLOv3 solver, you'll need to install [gocv](https://github.com/hybridgroup/gocv), 
@@ -11,6 +11,8 @@ and the YOLOv3 config, weights, and names, which can be downloaded from the
 
 Save all three files in a `yolo` directory in the main directory of your project. `go-hcaptcha` will use this directory
 to load the YOLOv3 model.
+
+![Example of the solver with YOLOv3.](images/example.png)
 
 ## Basic Usage
 In order to solve, you need the site URL (not the domain!), and the site key, which can be found 

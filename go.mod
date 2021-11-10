@@ -3,6 +3,7 @@ module github.com/justtaldevelops/go-hcaptcha
 go 1.16
 
 require (
+	github.com/go-redis/redis/v8 v8.11.4
 	github.com/go-vgo/robotgo v0.100.3
 	github.com/iancoleman/orderedmap v0.2.0
 	github.com/mxschmitt/playwright-go v0.1400.0

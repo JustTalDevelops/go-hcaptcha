@@ -1,6 +1,7 @@
 package hcaptcha
 
 import (
+	"github.com/go-redis/redis/v8"
 	"testing"
 )
 
@@ -17,5 +18,6 @@ func TestCaptcha(t *testing.T) {
 			continue
 		}
 		c.Logger().Info(c.Token())
+    break
 	}
 }

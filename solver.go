@@ -1,6 +1,10 @@
 package hcaptcha
 
 import (
+	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"github.com/go-redis/redis/v8"
 	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/wimspaargaren/yolov3"
@@ -37,6 +41,8 @@ func init() {
 
 // YOLOSolver uses the "You Only Look Once" (YOLO) algorithm to solve hCaptcha tasks.
 type YOLOSolver struct {
+	// Redis is the redis client used to store the hCaptcha task data.
+	Redis *redis.Client
 	// Log is the logger for the solver.
 	Log *logrus.Logger
 }
@@ -62,7 +68,7 @@ func (s *YOLOSolver) Solve(category, object string, tasks []Task) []Task {
 		if err != nil {
 			continue
 		}
-
+    
 		detections, err := yolo.GetDetections(frame)
 		if err != nil {
 			continue

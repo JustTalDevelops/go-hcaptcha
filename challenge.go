@@ -101,7 +101,7 @@ func (c *Challenge) Solve(solver Solver) error {
 	}
 
 	split := strings.Split(c.question, " ")
-	object := strings.Replace(strings.Replace(split[len(split)-1], "motorbus", "bus", 1), "airplane", "aeroplane", 1)
+	object := strings.Replace(strings.Replace(strings.Replace(split[len(split)-1], "motorbus", "bus", 1), "airplane", "aeroplane", 1), "motorcycle", "motorbike", 1)
 
 	c.log.Debugf(`The type of challenge is "%v"`, c.category)
 	c.log.Debugf(`The target object is "%v"`, object)

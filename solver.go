@@ -63,81 +63,26 @@ func (s *YOLOSolver) Solve(category, object string, tasks []Task) []Task {
 	// Answer the challenge.
 	var answers []Task
 	for _, task := range tasks {
-		h := sha1.New()
-		h.Write(task.Image)
-		hash := hex.EncodeToString(h.Sum(nil))
-		customId := object + "|" + hash
-		score := s.tileScore(customId)
-		if score < 0 {
-			// Impossible.
-			continue
-		}
-
-		// Possible!
-		if score >= 1 {
-			s.Log.Debugf("Detected %v in provided image (from cache!)", object)
-
-			answers = append(answers, task)
-			_ = s.increaseTileScore(customId, 1)
-			continue
-		}
-
 		// Decode and detect the object.
 		frame, err := gocv.IMDecode(task.Image, gocv.IMReadColor)
 		if err != nil {
 			continue
 		}
-
+    
 		detections, err := yolo.GetDetections(frame)
 		if err != nil {
 			continue
 		}
 
-		var detected bool
 		for _, detection := range detections {
 			if detection.ClassName == object && detection.Confidence > 0.6 {
 				s.Log.Debugf("Detected %v in provided image", object)
 
 				answers = append(answers, task)
-				_ = s.increaseTileScore(customId, 1)
-				detected = true
 				break
 			}
-		}
-
-		if !detected {
-			_ = s.decreaseScore(customId, 1)
 		}
 	}
 
 	return answers
-}
-
-// decreaseScore sets the impossible flag for the given task.
-func (s *YOLOSolver) decreaseScore(id string, delta int) error {
-	if s.Redis == nil {
-		return nil
-	}
-	return s.Redis.DecrBy(context.Background(), id, int64(delta)).Err()
-}
-
-// increaseTileScore increases the score of the tile.
-func (s *YOLOSolver) increaseTileScore(id string, delta int) error {
-	if s.Redis == nil {
-		return nil
-	}
-	return s.Redis.IncrBy(context.Background(), id, int64(delta)).Err()
-}
-
-// tileScore is the score of a tile.
-func (s *YOLOSolver) tileScore(id string) int {
-	if s.Redis == nil {
-		return 0
-	}
-
-	score, err := s.Redis.Get(context.Background(), id).Int()
-	if err != nil {
-		return 0
-	}
-	return score
 }

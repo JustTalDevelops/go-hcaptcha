@@ -12,15 +12,12 @@ func TestCaptcha(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		err = c.Solve(&YOLOSolver{
-			Log:   c.Logger(),
-			Redis: redis.NewClient(&redis.Options{Addr: "localhost:6379"}),
-		})
+		err = c.Solve(&YOLOSolver{Log: c.Logger()})
 		if err != nil {
 			c.Logger().Debug(err)
 			continue
 		}
 		c.Logger().Info(c.Token())
-		break
+    break
 	}
 }

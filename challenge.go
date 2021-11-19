@@ -386,7 +386,12 @@ func (c *Challenge) requestCaptcha() error {
 	c.category = response.Get("request_type").String()
 	c.question = response.Get("requester_question").Get("en").String()
 
-	for index, task := range response.Get("tasklist").Array() {
+	tasks := response.Get("tasklist").Array()
+	if len(tasks) == 0 {
+		return fmt.Errorf("no tasks in challenge, most likely ratelimited")
+	}
+
+	for index, task := range tasks {
 		resp, err = http.Get(task.Get("datapoint_uri").String())
 		if err != nil {
 			return err

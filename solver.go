@@ -41,8 +41,6 @@ func init() {
 
 // YOLOSolver uses the "You Only Look Once" (YOLO) algorithm to solve hCaptcha tasks.
 type YOLOSolver struct {
-	// Redis is the redis client used to store the hCaptcha task data.
-	Redis *redis.Client
 	// Log is the logger for the solver.
 	Log *logrus.Logger
 }

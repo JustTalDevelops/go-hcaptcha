@@ -1,10 +1,6 @@
 package hcaptcha
 
 import (
-	"context"
-	"crypto/sha1"
-	"encoding/hex"
-	"github.com/go-redis/redis/v8"
 	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/wimspaargaren/yolov3"
@@ -66,7 +62,7 @@ func (s *YOLOSolver) Solve(category, object string, tasks []Task) []Task {
 		if err != nil {
 			continue
 		}
-    
+
 		detections, err := yolo.GetDetections(frame)
 		if err != nil {
 			continue

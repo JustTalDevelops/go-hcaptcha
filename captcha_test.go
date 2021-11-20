@@ -1,7 +1,6 @@
 package hcaptcha
 
 import (
-	"github.com/go-redis/redis/v8"
 	"testing"
 )
 

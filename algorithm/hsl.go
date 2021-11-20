@@ -2,17 +2,9 @@ package algorithm
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
+	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"strings"
-)
-
-const (
-	// atob is a part of the full HSL generation script which converts base64 to binary.
-	atob = "function atob(r){return Buffer.from(r,\"base64\").toString(\"binary\")}"
-	// run is a part of the full HSL generation script which runs the script.
-	run = "hsl(process.argv[2]).then(function(r){console.log(r)})"
+	"time"
 )
 
 // HSL is one of a few proof algorithms for hCaptcha services.
@@ -25,30 +17,20 @@ func (h *HSL) Encode() string {
 
 // Prove ...
 func (h *HSL) Prove(request string) (string, error) {
-	f, err := ioutil.TempFile(os.TempDir(), "hsl.*.js")
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-	}()
+	jwt := utils.ParseJWT(request)
 
-	_, err = f.WriteString(atob + script("hsl.js") + run)
-	if err != nil {
-		panic(err)
-	}
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
+	now = now[:len(now)-5]
+	now = strings.ReplaceAll(now, "-", "")
+	now = strings.ReplaceAll(now, ":", "")
+	now = strings.ReplaceAll(now, "T", "")
 
-	cmd := exec.Command("node", f.Name(), request)
-	cmd.Dir = os.TempDir()
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	output := string(out)
-
-	if strings.Contains(output, "Token is invalid.") {
-		return "", fmt.Errorf(output)
-	}
-	return strings.TrimSpace(output), nil
+	return strings.Join([]string{
+		"1",
+		fmt.Sprint(int(jwt["s"].(float64))),
+		now,
+		jwt["d"].(string),
+		"",
+		"1", // TODO: Figure out if this is right?
+	}, ":"), nil
 }

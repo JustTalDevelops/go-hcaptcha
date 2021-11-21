@@ -70,7 +70,7 @@ func (s *YOLOSolver) Solve(category, object string, tasks []Task) []Task {
 		}
 
 		for _, detection := range detections {
-			fixedClassName := strings.Join(strings.Fields(detection.ClassName), "")
+			fixedClassName := strings.TrimSpace(detection.ClassName)
 			if fixedClassName == object && detection.Confidence > 0.6 {
 				s.Log.Debugf("Detected %v in provided image", object)
 

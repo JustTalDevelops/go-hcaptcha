@@ -1,6 +1,7 @@
 package hcaptcha
 
 import (
+	"strings"
 	"github.com/justtaldevelops/go-hcaptcha/utils"
 	"github.com/sirupsen/logrus"
 	"github.com/wimspaargaren/yolov3"
@@ -69,7 +70,8 @@ func (s *YOLOSolver) Solve(category, object string, tasks []Task) []Task {
 		}
 
 		for _, detection := range detections {
-			if detection.ClassName == object && detection.Confidence > 0.6 {
+			fixedClassName := strings.TrimSpace(detection.ClassName)
+			if fixedClassName == object && detection.Confidence > 0.6 {
 				s.Log.Debugf("Detected %v in provided image", object)
 
 				answers = append(answers, task)

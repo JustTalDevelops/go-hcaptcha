@@ -40,7 +40,7 @@ func Solve(algorithm, request string) (Proof, error) {
 
 // script gets the script of the algorithm from hCaptcha.
 func script(script string) string {
-	resp, err := http.Get("https://newassets.hcaptcha.com/c/" + utils.AssetVersion() + "/" + script)
+	resp, err := http.Get("https://newassets.hcaptcha.com/c/" + utils.AssetVersion + "/" + script)
 	if err != nil {
 		panic(err)
 	}

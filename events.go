@@ -1,14 +1,15 @@
 package hcaptcha
 
 import (
+	"github.com/go-gl/mathgl/mgl64"
 	"github.com/iancoleman/orderedmap"
 	"github.com/justtaldevelops/go-hcaptcha/agents"
-	"github.com/justtaldevelops/go-hcaptcha/screen"
 )
 
 // Event is a movement event.
 type Event struct {
-	screen.Point
+	// Point is the position of the event.
+	Point mgl64.Vec2
 	// Type represents the type of event. For example, a "mouse up" event would be "mu".
 	Type string
 	// Timestamp is the time the event was recorded.
@@ -99,16 +100,16 @@ func (e *EventContainer) Data() [][]int64 {
 func (e *EventContainer) Push(event Event) {
 	e.cleanStaleData()
 
-	notFirst := len(e.date) > 0
-
 	var timestamp int64
+
+	notFirst := len(e.date) > 0
 	if notFirst {
 		timestamp = e.date[len(e.date)-1]
 	}
 
 	if event.Timestamp-timestamp >= e.period {
 		e.date = append(e.date, event.Timestamp)
-		e.data = append(e.data, []int64{int64(event.Point.X), int64(event.Point.Y), event.Timestamp})
+		e.data = append(e.data, []int64{int64(event.Point.X()), int64(event.Point.Y()), event.Timestamp})
 
 		if notFirst {
 			delta := event.Timestamp - e.previousTimestamp

@@ -2,7 +2,7 @@ package algorithm
 
 import (
 	"fmt"
-	"github.com/justtaldevelops/go-hcaptcha/utils"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"strings"
 	"time"
 )
@@ -17,7 +17,15 @@ func (h *HSL) Encode() string {
 
 // Prove ...
 func (h *HSL) Prove(request string) (string, error) {
-	jwt := utils.ParseJWT(request)
+	tok, err := jwt.ParseSigned(request)
+	if err != nil {
+		panic(err)
+	}
+
+	var claims map[string]interface{}
+	if err = tok.UnsafeClaimsWithoutVerification(&claims); err != nil {
+		panic(err)
+	}
 
 	now := time.Now().UTC().Format("2006-01-02T15:04:05.999Z")
 	now = now[:len(now)-5]
@@ -27,9 +35,9 @@ func (h *HSL) Prove(request string) (string, error) {
 
 	return strings.Join([]string{
 		"1",
-		fmt.Sprint(int(jwt["s"].(float64))),
+		fmt.Sprint(int(claims["s"].(float64))),
 		now,
-		jwt["d"].(string),
+		claims["d"].(string),
 		"",
 		"1", // TODO: Figure out if this is right?
 	}, ":"), nil

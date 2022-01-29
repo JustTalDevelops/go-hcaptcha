@@ -31,7 +31,7 @@ type CurveOpts struct {
 }
 
 // defaultCurveOpts returns the default curve options.
-func (h *HumanCurve) defaultCurveOpts(opts *CurveOpts) {
+func (h *Curve) defaultCurveOpts(opts *CurveOpts) {
 	defaultOffsetBoundaryX := 100
 	if opts.OffsetBoundaryX == nil {
 		opts.OffsetBoundaryX = &defaultOffsetBoundaryX
@@ -42,22 +42,22 @@ func (h *HumanCurve) defaultCurveOpts(opts *CurveOpts) {
 		opts.OffsetBoundaryY = &defaultOffsetBoundaryY
 	}
 
-	defaultLeftBoundary := int(math.Min(h.fromPoint.X, h.toPoint.X))
+	defaultLeftBoundary := int(math.Min(h.fromPoint.X(), h.toPoint.X()))
 	if opts.LeftBoundary == nil {
 		opts.LeftBoundary = &defaultLeftBoundary
 	}
 
-	defaultRightBoundary := int(math.Max(h.fromPoint.X, h.toPoint.X))
+	defaultRightBoundary := int(math.Max(h.fromPoint.X(), h.toPoint.X()))
 	if opts.RightBoundary == nil {
 		opts.RightBoundary = &defaultRightBoundary
 	}
 
-	defaultDownBoundary := int(math.Min(h.fromPoint.Y, h.toPoint.Y))
+	defaultDownBoundary := int(math.Min(h.fromPoint.Y(), h.toPoint.Y()))
 	if opts.DownBoundary == nil {
 		opts.DownBoundary = &defaultDownBoundary
 	}
 
-	defaultUpBoundary := int(math.Max(h.fromPoint.Y, h.toPoint.Y))
+	defaultUpBoundary := int(math.Max(h.fromPoint.Y(), h.toPoint.Y()))
 	if opts.UpBoundary == nil {
 		opts.UpBoundary = &defaultUpBoundary
 	}
@@ -86,7 +86,7 @@ func (h *HumanCurve) defaultCurveOpts(opts *CurveOpts) {
 		opts.Tween = defaultTween
 	}
 
-	targetPoints := 100
+	targetPoints := 300
 	if opts.TargetPoints == nil {
 		opts.TargetPoints = &targetPoints
 	}

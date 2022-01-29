@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/go-gl/mathgl/mgl64"
 	"github.com/iancoleman/orderedmap"
 	"github.com/justtaldevelops/go-hcaptcha/agents"
 	"github.com/justtaldevelops/go-hcaptcha/algorithm"
@@ -134,7 +135,7 @@ func (c *Challenge) Solve(solver Solver) error {
 	}
 
 	m := orderedmap.New()
-	m.Set("v", utils.Version())
+	m.Set("v", utils.Version)
 	m.Set("job_mode", c.category)
 	m.Set("answers", answersAsMap)
 	m.Set("serverdomain", c.host)
@@ -173,7 +174,7 @@ func (c *Challenge) Solve(solver Solver) error {
 	}
 	response := gjson.ParseBytes(b)
 	if !response.Get("pass").Bool() {
-		return fmt.Errorf("submit request was rejected")
+		return fmt.Errorf("incorrect answers")
 	}
 
 	c.log.Info("Successfully completed challenge!")
@@ -223,7 +224,7 @@ func (c *Challenge) setupFrames() {
 // simulateMouseMovements simulates mouse movements for the hCaptcha API.
 func (c *Challenge) simulateMouseMovements(answers []Task) {
 	totalPages := int(math.Max(1, float64(len(c.tasks)/utils.TilesPerPage)))
-	cursorPos := screen.Point{X: float64(utils.Between(1, 5)), Y: float64(utils.Between(300, 350))}
+	cursorPos := mgl64.Vec2{float64(utils.Between(1, 5)), float64(utils.Between(300, 350))}
 
 	rightBoundary := utils.FrameSize[0]
 	upBoundary := utils.FrameSize[1]
@@ -239,12 +240,12 @@ func (c *Challenge) simulateMouseMovements(answers []Task) {
 				continue
 			}
 
-			tilePos := screen.Point{
-				X: float64((utils.TileImageSize[0] * tile.Index % utils.TilesPerRow) +
+			tilePos := mgl64.Vec2{
+				float64((utils.TileImageSize[0] * tile.Index % utils.TilesPerRow) +
 					utils.TileImagePadding[0]*tile.Index%utils.TilesPerRow +
 					utils.Between(10, utils.TileImageSize[0]) +
 					utils.TileImageStartPosition[0]),
-				Y: float64((utils.TileImageSize[1] * tile.Index % utils.TilesPerRow) +
+				float64((utils.TileImageSize[1] * tile.Index % utils.TilesPerRow) +
 					utils.TileImagePadding[1]*tile.Index%utils.TilesPerRow +
 					utils.Between(10, utils.TileImageSize[1]) +
 					utils.TileImageStartPosition[1]),
@@ -261,9 +262,9 @@ func (c *Challenge) simulateMouseMovements(answers []Task) {
 			cursorPos = tilePos
 		}
 
-		buttonPos := screen.Point{
-			X: float64(utils.VerifyButtonPosition[0] + utils.Between(5, 50)),
-			Y: float64(utils.VerifyButtonPosition[1] + utils.Between(5, 15)),
+		buttonPos := mgl64.Vec2{
+			float64(utils.VerifyButtonPosition[0] + utils.Between(5, 50)),
+			float64(utils.VerifyButtonPosition[1] + utils.Between(5, 15)),
 		}
 
 		movements := c.generateMouseMovements(cursorPos, buttonPos, opts)
@@ -280,14 +281,14 @@ func (c *Challenge) simulateMouseMovements(answers []Task) {
 // movement is a mouse movement.
 type movement struct {
 	// point is the mouse's position at the timestamp.
-	point screen.Point
+	point mgl64.Vec2
 	// timestamp is the timestamp of the movement.
 	timestamp int64
 }
 
 // generateMouseMovements generates mouse movements for simulateMouseMovements.
-func (c *Challenge) generateMouseMovements(fromPoint, toPoint screen.Point, opts *screen.CurveOpts) []movement {
-	curve := screen.NewHumanCurve(fromPoint, toPoint, opts)
+func (c *Challenge) generateMouseMovements(fromPoint, toPoint mgl64.Vec2, opts *screen.CurveOpts) []movement {
+	curve := screen.NewCurve(fromPoint, toPoint, opts)
 	points := curve.Points()
 
 	resultMovements := make([]movement, len(points))
@@ -338,7 +339,7 @@ func (c *Challenge) requestCaptcha() error {
 	}
 
 	form := url.Values{}
-	form.Add("v", utils.Version())
+	form.Add("v", utils.Version)
 	form.Add("sitekey", c.siteKey)
 	form.Add("host", c.host)
 	form.Add("hl", "en")
@@ -419,7 +420,7 @@ func (c *Challenge) requestCaptcha() error {
 
 // siteConfig verifies a site configuration and returns proof of work for the given challenge.
 func (c *Challenge) siteConfig() error {
-	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?v="+utils.Version()+"&host="+c.host+"&sitekey="+c.siteKey+"&sc=1&swa=1", nil)
+	req, err := http.NewRequest("GET", "https://hcaptcha.com/checksiteconfig?v="+utils.Version+"&host="+c.host+"&sitekey="+c.siteKey+"&sc=1&swa=1", nil)
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,7 @@ func TestCaptcha(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		err = c.Solve(&YOLOSolver{Log: c.Logger()})
+		err = c.Solve(&GuessSolver{})
 		if err != nil {
 			c.Logger().Debug(err)
 			continue

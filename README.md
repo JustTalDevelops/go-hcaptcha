@@ -1,38 +1,37 @@
 # go-hcaptcha
 
-A Go library for solving hCaptchas with YOLOv3 and options for other image recognition systems within twenty seconds.
+A Go library for solving hCaptchas with any image recognition API.
 
 ![1v1 me, bro!](images/one_vs_one.png)
-
-## Installation
-In order to use the main YOLOv3 solver, you'll need to install [gocv](https://github.com/hybridgroup/gocv), 
-and the YOLOv3 config, weights, and names, which can be downloaded from the 
-[Go YOLOv3 repository](https://github.com/wimspaargaren/yolov3), specifically the
-[getModels.sh](https://github.com/wimspaargaren/yolov3/blob/master/getModels.sh) script, which will get all three for you.
-
-Save all three files in a `yolo` directory in the main directory of your project. `go-hcaptcha` will use this directory
-to load the YOLOv3 model.
-
-![Example of the solver with YOLOv3.](images/example.png)
 
 ## Basic Usage
 In order to solve, you need the site URL (not the domain!), and the site key, which can be found 
 in the HTML of the website with the hCaptcha challenge.
 
-Below is a basic example of how to use the solver with the two using YOLOv3.
+Below is a basic example of how to use the solver with the two using a simple guessing solver.
 ```go
 c, err := NewChallenge(siteUrl, siteKey)
 if err != nil {
     panic(err)
 }
-err = c.Solve(&YOLOSolver{Log: c.log})
+err = c.Solve(&GuessSolver{})
 if err != nil {
     c.log.Panic(err)
 }
-c.log.Info(c.Token())
+fmt.Println(c.Token()) // P0_eyJ0eXAiOiJKV1QiLC...
 ```
 
+## Custom Solvers
+Custom solvers can be implemented with ease. All solvers need to implement the `Solver` interface. You
+can link this with any image recognition API you want.
+
+You can see an example of this with the `GuessSolver` implementation in `solver.go`.
+
 ## Credits
+
+### 2.0.1
+A few changes to support the modern API, and general code cleanup along with a switch to `mathgl` for
+Bézier curve creation.
 
 ### 2.0.0
 The motion data capturing required with hCaptcha would not be possible without the work of 

@@ -16,7 +16,7 @@ if err != nil {
 }
 err = c.Solve(&GuessSolver{})
 if err != nil {
-    c.log.Panic(err)
+    panic(err)
 }
 fmt.Println(c.Token()) // P0_eyJ0eXAiOiJKV1QiLC...
 ```

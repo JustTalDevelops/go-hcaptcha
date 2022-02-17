@@ -38,9 +38,9 @@ type Challenge struct {
 type ChallengeOptions struct {
 	// Logger is the logger to use for logging.
 	Logger *logrus.Logger
-	// Set proxy to use for solving.
+	// Proxy is the proxy to use for requests to hCaptcha.
 	Proxy string
-	// Set request timeout for solving.
+	// Timeout is the timeout to use for requests to hCaptcha.
 	Timeout time.Duration
 }
 

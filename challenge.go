@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Challenge is an hCaptcha challenge.
@@ -37,8 +38,10 @@ type Challenge struct {
 type ChallengeOptions struct {
 	// Logger is the logger to use for logging.
 	Logger *logrus.Logger
-	// Proxies is a list of proxies to use for solving.
-	Proxies []string
+	// Proxy is the proxy to use for requests to hCaptcha.
+	Proxy string
+	// Timeout is the timeout to use for requests to hCaptcha.
+	Timeout time.Duration
 }
 
 // Task is a task assigned by hCaptcha.
@@ -61,7 +64,7 @@ func basicChallengeOptions(options *ChallengeOptions) {
 }
 
 // NewChallenge creates a new hCaptcha challenge.
-func NewChallenge(url, siteKey string, opts ...ChallengeOptions) (*Challenge, error) {
+func NewChallenge(targetUrl, siteKey string, opts ...ChallengeOptions) (*Challenge, error) {
 	if len(opts) == 0 {
 		opts = append(opts, ChallengeOptions{})
 	}
@@ -69,10 +72,23 @@ func NewChallenge(url, siteKey string, opts ...ChallengeOptions) (*Challenge, er
 	options := opts[0]
 	basicChallengeOptions(&options)
 
+	if len(options.Proxy) > 0 {
+		proxyUrl, err := url.Parse(options.Proxy)
+		if err != nil {
+			return nil, err
+		}
+
+		http.DefaultClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	}
+
+	if options.Timeout > 0 {
+		http.DefaultClient.Timeout = options.Timeout
+	}
+
 	c := &Challenge{
-		host:     strings.ToLower(strings.Split(strings.Split(url, "://")[1], "/")[0]),
+		host:     strings.ToLower(strings.Split(strings.Split(targetUrl, "://")[1], "/")[0]),
 		siteKey:  siteKey,
-		url:      url,
+		url:      targetUrl,
 		log:      options.Logger,
 		widgetID: utils.WidgetID(),
 		agent:    agents.NewChrome(),

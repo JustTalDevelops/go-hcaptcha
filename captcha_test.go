@@ -2,12 +2,19 @@ package hcaptcha
 
 import (
 	"testing"
+	"time"
 )
 
 // TestCaptcha ...
 func TestCaptcha(t *testing.T) {
 	for {
-		c, err := NewChallenge("https://minecraftpocket-servers.com/server/41256/vote/", "e6b7bb01-42ff-4114-9245-3d2b7842ed92")
+		c, err := NewChallenge(
+			"http://democaptcha.com/demo-form-eng/hcaptcha.html",
+			"51829642-2cda-4b09-896c-594f89d700cc",
+			ChallengeOptions{
+				Timeout: 10 * time.Second,
+			},
+		)
 		if err != nil {
 			panic(err)
 		}

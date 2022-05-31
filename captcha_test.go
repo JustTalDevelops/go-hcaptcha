@@ -9,7 +9,7 @@ import (
 func TestCaptcha(t *testing.T) {
 	for {
 		c, err := NewChallenge(
-			"http://democaptcha.com/demo-form-eng/hcaptcha.html",
+			"https://democaptcha.com/demo-form-eng/hcaptcha.html",
 			"51829642-2cda-4b09-896c-594f89d700cc",
 			ChallengeOptions{
 				Timeout: 10 * time.Second,

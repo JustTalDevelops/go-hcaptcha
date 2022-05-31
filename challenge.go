@@ -46,8 +46,8 @@ type ChallengeOptions struct {
 
 // Task is a task assigned by hCaptcha.
 type Task struct {
-	// Image is the image to represent the task.
-	Image []byte
+	// Image is a link to the image URL to represent the task.
+	Image string
 	// Key is the task key, used when referencing answers.
 	Key string
 	// Index is the index of the task.
@@ -409,18 +409,8 @@ func (c *Challenge) requestCaptcha() error {
 	}
 
 	for index, task := range tasks {
-		resp, err = http.Get(task.Get("datapoint_uri").String())
-		if err != nil {
-			return err
-		}
-		b, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-		_ = resp.Body.Close()
-
 		c.tasks = append(c.tasks, Task{
-			Image: b,
+			Image: task.Get("datapoint_uri").String(),
 			Key:   task.Get("task_key").String(),
 			Index: index,
 		})

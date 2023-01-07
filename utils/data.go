@@ -18,7 +18,7 @@ var (
 	TilesPerRow = 3
 
 	// Version is the lastest supported version.
-	Version = "44fc726"
+	Version = "48ebaaf"
 	// AssetVersion is the latest supported version of the assets.
-	AssetVersion = "4acef65c"
+	AssetVersion = "2027f8c"
 )

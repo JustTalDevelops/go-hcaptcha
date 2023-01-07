@@ -9,8 +9,8 @@ import (
 func TestCaptcha(t *testing.T) {
 	for {
 		c, err := NewChallenge(
-			"https://democaptcha.com/demo-form-eng/hcaptcha.html",
-			"51829642-2cda-4b09-896c-594f89d700cc",
+			"https://accounts.hcaptcha.com/demo",
+			"a5f74b19-9e45-40e0-b45d-47ff91b7a6c2",
 			ChallengeOptions{
 				Timeout: 10 * time.Second,
 			},
@@ -20,7 +20,7 @@ func TestCaptcha(t *testing.T) {
 		}
 		err = c.Solve(&GuessSolver{})
 		if err != nil {
-			c.Logger().Debug(err)
+			c.Logger().Debugf("Error from hCaptcha API: %s", err)
 			continue
 		}
 		c.Logger().Info(c.Token())

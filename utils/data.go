@@ -17,7 +17,7 @@ var (
 	// TilesPerRow is the number of tiles per row.
 	TilesPerRow = 3
 
-	// Version is the lastest supported version.
+	// Version is the latest supported version.
 	Version = "48ebaaf"
 	// AssetVersion is the latest supported version of the assets.
 	AssetVersion = "2027f8c"
